@@ -4,6 +4,13 @@
 #            February 2 2026
 
 # Designed for TI-Nspire CX CAS II Python environment
+
+# TI-NSPIRE COMPATIBILITY NOTES
+# - No f-strings
+# - No Unicode arrows
+# - math module only
+# - Python 3.4-ish subset
+
 # Data Sharing
 #================================
 
