@@ -5,7 +5,7 @@
     <ProjectGuid>62640efa-edcd-4e69-a397-ede4baf8f3f3</ProjectGuid>
     <ProjectHome>
     </ProjectHome>
-    <StartupFile>Calculus_Buddy.py</StartupFile>
+    <StartupFile>Calculus_I_Buddy.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -22,7 +22,7 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Calculus_Buddy.py" />
+    <Compile Include="Calculus_I_Buddy.py" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
