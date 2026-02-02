@@ -1,4 +1,4 @@
-# Calculus Solver
+# Calculus I Buddy
 ## License
 
 All rights reserved.
