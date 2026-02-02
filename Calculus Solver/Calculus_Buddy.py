@@ -1,6 +1,7 @@
 ﻿
-# Calculus 1 Study Tools
+# Calculus I Buddy v0.3
 #       By ScienTiz github.com/ScienTiz
+#            February 2 2026
 
 # Designed for TI-Nspire CX CAS II Python environment
 # Data Sharing
@@ -389,10 +390,10 @@ def main():
     while True:
         print("\n\nCalculus Solver")
         print("By ScienTiz\n\n")
-        print("1) Limit  Calculator x -> a")
-        print("2) Limit from a Graph: Guided")
-        print("3) Derivatives Solver f'(a)")
-        print("4) Derivatives: Guide")
+        print("1) Limit Calculator x -> a")
+        print("2) Limit From a Graph: Guided")
+        print("3) Derivative Calculator f'(a)")
+        print("4) Derivatives: Guided")
         print("5) Tangent line at x=a")
         print("6) Velocity / Instantaneous Rate Definition")
         print("7) Quit")
