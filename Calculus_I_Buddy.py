@@ -1,406 +1,548 @@
-﻿
-# Calculus I Buddy
+﻿# Calculus I Buddy
 #       By ScienTiz github.com/ScienTiz
-#            February 2 2026
-
-# Designed for TI-Nspire CX CAS II Python environment
-
+#
+# Designed for TI-Nspire CX II CAS Python environment
+#
 # TI-NSPIRE COMPATIBILITY NOTES
 # - No f-strings
-# - No Unicode arrows
+# - Avoid Unicode symbols (use x->a, h->0)
 # - math module only
 # - Python 3.4-ish subset
 
-# Data Sharing
-#================================
+import math
 
-from ti_system import eval_function
+
+# ================================
+# Helpers
+# ================================
 
 def pause():
     input("\nPress ENTER to return to menu...")
-    
-import math
 
-def eval_function(expr, x):
+
+def _is_alnum_or_underscore(ch):
+    # TI-safe replacement for str.isalnum()
+    if ch == "_":
+        return True
+    o = ord(ch)
+    # 0-9
+    if 48 <= o <= 57:
+        return True
+    # A-Z
+    if 65 <= o <= 90:
+        return True
+    # a-z
+    if 97 <= o <= 122:
+        return True
+    return False
+
+
+def _replace_const_token(s, token, repl):
+    """
+    Replace constants like pi, e only when token is not part of a larger word.
+    Example: replace 'pi' in '2*pi' but not in 'pilot'
+    TI-safe: does not use isalnum().
+    """
+    out = ""
+    i = 0
+    n = len(s)
+    tlen = len(token)
+
+    while i < n:
+        if s[i:i + tlen] == token:
+            left_ok = (i == 0) or (not _is_alnum_or_underscore(s[i - 1]))
+            right_ok = (i + tlen == n) or (not _is_alnum_or_underscore(s[i + tlen]))
+            if left_ok and right_ok:
+                out += repl
+                i += tlen
+                continue
+        out += s[i]
+        i += 1
+
+    return out
+
+
+
+def eval_expr(expr, x):
+    """
+    TI-safe expression evaluator.
+    Supports conservative implicit multiplication:
+    3x, 2(x+1), (x+1)(x-1), pi*x
+    """
+    DEBUG = False
+
+    def _is_digit(ch):
+        o = ord(ch)
+        return 48 <= o <= 57
+
     try:
-        s = expr
+        s = expr.strip()
+
+        # Normalize TI characters
+        s = s.replace(" ", "")
+        s = s.replace(u"\u00d7", "*")   # ×
+        s = s.replace(u"\u00b7", "*")   # ·
+        s = s.replace(u"\u2219", "*")   # ∙
+        s = s.replace(u"\u22c5", "*")   # ⋅
+        s = s.replace(u"\u2022", "*")   # •
+        s = s.replace(u"\u2212", "-")   # −
+        s = s.replace(u"\u03c0", "pi")  # π
+        s = s.replace(u"\u03a0", "pi")  # Π
+
+        # Normalize common constant spellings
+        s = s.replace("PI", "pi")
+        s = s.replace("Pi", "pi")
+
+        # Implicit multiplication pass (simple, reliable)
+        out = ""
+        n = len(s)
+        i = 0
+        while i < n:
+            a = s[i]
+            out += a
+
+            if i < n - 1:
+                b = s[i + 1]
+
+                # digit followed by x or (
+                if _is_digit(a) and (b == "x" or b == "("):
+                    out += "*"
+
+                # x followed by digit or (
+                elif a == "x" and (_is_digit(b) or b == "("):
+                    out += "*"
+
+                # ) followed by digit or x or (
+                elif a == ")" and (_is_digit(b) or b == "x" or b == "("):
+                    out += "*"
+
+                # digit followed by p (for 2pi)
+                elif _is_digit(a) and b == "p":
+                    out += "*"
+
+                # x followed by p (for xpi)
+                elif a == "x" and b == "p":
+                    out += "*"
+
+            i += 1
+
+        s = out
+
+        # Fix pi( ... ) case (pi(x+1) -> pi*(x+1))
+        s = s.replace("pi(", "pi*(")
+
+        # Power
         s = s.replace("^", "**")
-        s = s.replace("sin", "math.sin")
-        s = s.replace("cos", "math.cos")
-        s = s.replace("tan", "math.tan")
-        s = s.replace("sqrt", "math.sqrt")
-        s = s.replace("ln", "math.log")
-        s = s.replace("pi", "math.pi")
-        s = s.replace("e", "math.e")
-        return eval(s, {"math": math, "x": x})
-    except:
+
+        # Functions
+        s = s.replace("sin(", "math.sin(")
+        s = s.replace("cos(", "math.cos(")
+        s = s.replace("tan(", "math.tan(")
+        s = s.replace("sqrt(", "math.sqrt(")
+        s = s.replace("ln(", "math.log(")
+
+        # Constants (token-safe)
+        s = _replace_const_token(s, "pi", "math.pi")
+        s = _replace_const_token(s, "e", "math.e")
+
+        if DEBUG:
+            print("DEBUG expr:", repr(expr))
+            print("DEBUG final:", repr(s))
+
+        return eval(s, {"math": math}, {"x": x})
+
+    except Exception as e:
+        if DEBUG:
+            print("DEBUG FAIL expr:", repr(expr))
+            print("DEBUG FAIL final:", repr(s))
+            print("DEBUG ERROR:", e)
         return None
+
+
+
+
+
 
 
 
 def derivative_at(expr, a):
     h = 1e-5
-    f1 = eval_function(expr, a + h)
-    f2 = eval_function(expr, a - h)
+    f1 = eval_expr(expr, a + h)
+    f2 = eval_expr(expr, a - h)
     if f1 is None or f2 is None:
         return None
-    return (f1 - f2) / (2*h)
+    return (f1 - f2) / (2.0 * h)
 
 
 def function_value(expr, a):
-    return eval_function(expr, a)
+    return eval_expr(expr, a)
 
 
-
-
-
-def f(x):
-    try:
-        return eval_function("f", x)
-    except Exception as e:
-        print("DEBUG:", e)
-        raise
-
-
+# ================================
+# Tools
+# ================================
 
 def limit_tool():
-    print("\nLIMIT: lim x -> a")
-
+    print("\nLIMIT: lim x->a")
     expr = input("Enter expression in x: ")
-    a = float(input("Enter a: "))
+
+    try:
+        a = float(input("Enter a: "))
+    except:
+        print("Invalid a.")
+        pause()
+        return
 
     dx_values = [0.1, 0.01, 0.001, 0.0001]
 
     left_vals = []
     right_vals = []
 
-    print("\nChecking values near", a)
-
     for dx in dx_values:
-        # Left-hand
         xl = a - dx
-        yl = eval_function(expr, xl)
-        if yl is not None and abs(yl) < 1e10:
-            print("x =", xl, "f(x) =", yl)
-            left_vals.append((dx, yl))
-
-        # Right-hand
         xr = a + dx
-        yr = eval_function(expr, xr)
+
+        yl = eval_expr(expr, xl)
+        yr = eval_expr(expr, xr)
+
+        if yl is not None and abs(yl) < 1e10:
+            left_vals.append((dx, yl))
         if yr is not None and abs(yr) < 1e10:
-            print("x =", xr, "f(x) =", yr)
             right_vals.append((dx, yr))
 
-    print("\nConclusion:")
+    print("\n--- STEP-BY-STEP ---")
+    print("Step 1: f(x) =", expr)
+    print("Step 2: x approaches", a)
 
-    # Closest values
-    print("\n--- STEP-BY-STEP SOLUTION ---")
+    if len(left_vals) == 0 and len(right_vals) > 0:
+        print("\nStep 3: Function is undefined on the LEFT of a.")
+        print("This suggests a RIGHT-HAND limit.")
+        print("Consider evaluating lim x->a+.")
+        pause()
+        return
+    
+    if len(right_vals) == 0 and len(left_vals) > 0:
+        print("\nStep 3: Function is undefined on the RIGHT of a.")
+        print("This suggests a LEFT-HAND limit.")
+        print("Consider evaluating lim x->a-.")
+        pause()
+        return
+    
+    if len(left_vals) == 0 and len(right_vals) == 0:
+        print("\nStep 3: Function is undefined on BOTH sides of a.")
+        print("Conclusion: Cannot estimate this limit.")
+        pause()
+        return
 
-    print("Step 1: Identify the function")
-    print("f(x) =", expr)
+
+
+    # Use closest dx that worked
+    Ldx, L = left_vals[-1][0], left_vals[-1][1]
+    Rdx, R = right_vals[-1][0], right_vals[-1][1]
+
+    print("\nStep 3: Closest checks")
+    print("Left : x =", a - Ldx, " f(x) =", round(L, 6))
+    print("Right: x =", a + Rdx, " f(x) =", round(R, 6))
     
-    print("\nStep 2: Identify the limit point")
-    print("x approaches", a)
-    
-    print("\nStep 3: Evaluate values near", a)
-    
-    L = left_vals[-1][1]
-    R = right_vals[-1][1]
-    
-    BIG = 1e6
-    
-    if abs(L) > BIG and abs(R) > BIG:
-        print("\nStep 4: Analyze behavior")
-        print("Values increase without bound.")
-    
-        if L > 0 and R > 0:
-            print("Both sides approach +infinity.")
-            print("\nConclusion:")
-            print("The limit does not exist (diverges to +infinity).")
-        elif L < 0 and R < 0:
-            print("Both sides approach -infinity.")
-            print("\nConclusion:")
-            print("The limit does not exist (diverges to -infinity).")
-        else:
-            print("Left-hand and right-hand behavior differ.")
-            print("\nConclusion:")
-            print("The limit does not exist (DNE).")
-    
-    elif abs(L - R) < 0.05:
-        print("\nStep 4: Compare left-hand and right-hand values")
-        print("Left-hand value ≈", round(L, 6))
-        print("Right-hand value ≈", round(R, 6))
-    
-        limit_val = (L + R) / 2
-    
-        print("\nConclusion:")
-        print("The limit exists.")
-        print("lim x →", a, "=", round(limit_val, 6))
-    
+    # Paper-ready work line
+    # Paper-ready work lines
+    print("\nWRITE THIS:")
+
+    print("Let dx = " + str(Ldx) + " (left) and dx = " + str(Rdx) + " (right)")
+    print("Left-hand:  f(a - dx) = f(" + str(round(a - Ldx, 6)) + ") approx " + str(round(L, 6)))
+    print("Right-hand: f(a + dx) = f(" + str(round(a + Rdx, 6)) + ") approx " + str(round(R, 6)))
+
+    if abs(L - R) < 0.05:
+        limit_val = (L + R) / 2.0
+        print("Since left approx right, the limit exists.")
+        print("lim x->" + str(a) + " f(x) approx " + str(round(limit_val, 6)))
     else:
-        print("\nStep 4: Compare left-hand and right-hand values")
-        print("Left-hand value ≈", round(L, 6))
-        print("Right-hand value ≈", round(R, 6))
-    
-        print("\nConclusion:")
-        print("The limit does not exist (DNE).")
-    
-    input("\nPress ENTER to return to menu...")
-    return
-    
+        print("Since left != right, the limit does not exist (DNE).")
+
+
+
+    BIG = 1e6
+    print("\nStep 4: Conclusion")
+
+    if abs(L) > BIG and abs(R) > BIG:
+        if L > 0 and R > 0:
+            print("Limit diverges to +infinity (DNE).")
+        elif L < 0 and R < 0:
+            print("Limit diverges to -infinity (DNE).")
+        else:
+            print("Left and right behaviors differ (DNE).")
+
+    elif abs(L - R) < 0.05:
+        limit_val = (L + R) / 2.0
+        print("Limit exists.")
+        print("lim x->", a, "=", round(limit_val, 6))
+
+    else:
+        print("Left and right do not match closely (DNE).")
+
+    pause()
 
 
 def limit_from_graph_guide():
-    print("\nLIMITS FROM A GRAPH — GUIDED REASONING")
+    print("\nLIMITS FROM A GRAPH (GUIDED)")
     print("Use this when a GRAPH is given.\n")
 
-    a = input("Enter the x-value the limit approaches (a): ")
+    a = input("Enter the x-value approached (a): ")
 
-    print("\n--- READ THE GRAPH CAREFULLY ---\n")
+    print("\nStep 1: From the LEFT, what y-value is approached?")
+    left = input("Left-hand value (or DNE): ")
 
-    print("Step 1: Look at the graph as x approaches", a, "from the LEFT")
-    print("Ask: Where do the y-values go?\n")
+    print("\nStep 2: From the RIGHT, what y-value is approached?")
+    right = input("Right-hand value (or DNE): ")
 
-    left = input("Left-hand value (or type DNE): ")
-
-    print("\nStep 2: Look at the graph as x approaches", a, "from the RIGHT")
-    print("Ask: Where do the y-values go?\n")
-
-    right = input("Right-hand value (or type DNE): ")
-
-    print("\nStep 3: Compare left and right limits")
+    print("\nStep 3: Compare")
+    limit_exists = False
+    limit_value = None
 
     if left == right and left != "DNE":
-        print("Left-hand limit = Right-hand limit")
-        print("The limit EXISTS.")
         limit_exists = True
         limit_value = left
+        print("Left = Right, so the limit EXISTS.")
     else:
-        print("Left-hand limit ≠ Right-hand limit")
-        print("The limit does NOT exist (DNE).")
-        limit_exists = False
+        print("Left != Right, so the limit is DNE.")
 
-    print("\nStep 4: Check the function value f(" + a + ")")
-    print("Look for a FILLED dot at x =", a)
+    print("\nStep 4: What is f(a)? (filled dot only)")
+    f_val = input("Enter f(" + a + ") or undefined: ")
 
-    f_val = input("Enter f(" + a + ") value if shown, or type undefined: ")
-
-    print("\n--- FINAL CONCLUSIONS ---")
-
+    print("\n--- FINAL ---")
     if limit_exists:
-        print("lim x→" + a + " f(x) =", limit_value)
+        print("lim x->" + a + " f(x) =", limit_value)
     else:
-        print("lim x→" + a + " f(x) does not exist")
-
+        print("lim x->" + a + " f(x) is DNE")
     print("f(" + a + ") =", f_val)
 
-    print("\nIMPORTANT:")
-    print("- The limit depends on where the graph APPROACHES")
-    print("- f(a) depends on the FILLED dot only")
+    print("\nWRITE THIS:")
+    print("Left-hand limit = " + left)
+    print("Right-hand limit = " + right)
+    if limit_exists:
+        print("Since left = right, lim x->" + a + " f(x) = " + limit_value)
+    else:
+        print("Since left != right, lim x->" + a + " f(x) is DNE")
+    print("f(" + a + ") = " + f_val)
 
-    input("\nPress ENTER to return to menu...")
 
+    pause()
 
 
 def derivative_tool():
-    print("DERIVATIVE: f'(a)")
+    print("\nDERIVATIVE: f'(a) (numeric estimate)")
     expr = input("Enter expression in x: ")
-    a = float(input("Enter a: "))
 
-    print("")
-    print("--- STEP-BY-STEP SOLUTION ---")
-    print("Step 1: Identify the function")
-    print("f(x) = " + expr)
-
-    print("")
-    print("Step 2: Use the definition")
-    print("f'(a) = lim h->0 [f(a+h) - f(a)] / h")
-
-    hs = [0.1, 0.01, 0.001, 0.0001]
-
-    fa = eval_function(expr, a)
-    if fa is None:
-        print("")
-        print("Error: f(a) could not be evaluated.")
-        input("Press ENTER to return...")
+    try:
+        a = float(input("Enter a: "))
+    except:
+        print("Invalid a.")
+        pause()
         return
 
-    print("")
-    print("Step 3: Compute slopes near a = " + str(a))
+    print("\n--- STEP-BY-STEP ---")
+    print("Step 1: f(x) =", expr)
+    print("Step 2: f'(a) = lim h->0 [f(a+h) - f(a-h)] / (2h)")
+    print("Step 3: Slopes near a =", a)
 
+    hs = [0.1, 0.01, 0.001, 0.0001]
     last_good = None
 
     for h in hs:
-        f1 = eval_function(expr, a + h)
-        if f1 is None:
-            print("h = " + str(h) + " slope = undefined")
+        f_plus = eval_expr(expr, a + h)
+        f_minus = eval_expr(expr, a - h)
+
+        if f_plus is None or f_minus is None:
+            print("h =", h, " slope = undefined")
             continue
 
-        slope = (f1 - fa) / h
+        slope = (f_plus - f_minus) / (2.0 * h)
         last_good = slope
-        print("h = " + str(h) + " slope ~= " + str(slope))
+        print("h =", h, " slope ~= ", round(slope, 6))
 
-    print("")
-    print("Conclusion:")
+    print("\nConclusion:")
     if last_good is None:
         print("Not enough data to estimate derivative.")
     else:
-        print("f'(" + str(a) + ") ~= " + str(last_good))
-
-    input("Press ENTER to return to menu...")
+        print("f'(" + str(a) + ") ~= " + str(round(last_good, 6)))
+        
+    if last_good is not None:
+        # Paper-ready line using the smallest h
+        h = hs[-1]
+        f_plus = eval_expr(expr, a + h)
+        f_minus = eval_expr(expr, a - h)
     
+        if f_plus is not None and f_minus is not None:
+            print("\nWRITE THIS:")
+            print("f'(a) approx [f(a+h) - f(a-h)] / (2h)")
+            print("a = " + str(a) + ", h = " + str(h))
+    
+            # Option A: show substitution in terms of the original expression
+            print("f(a+h) = (" + expr + ") with x = " + str(a + h))
+            print("f(a-h) = (" + expr + ") with x = " + str(a - h))
+    
+            # Then show evaluated values
+            print("f(a+h) approx " + str(round(f_plus, 6)))
+            print("f(a-h) approx " + str(round(f_minus, 6)))
+    
+            num = f_plus - f_minus
+            den = 2.0 * h
+    
+            print("f'(a) approx (" + str(round(num, 6)) + ") / (" + str(den) + ")")
+            print("f'(" + str(a) + ") approx " + str(round(num / den, 6)))
+
+
+
+
+    pause()
+
+
+
 def derivative_definition_guided():
-    print("\nDERIVATIVE f'(x) USING LIMIT DEFINITION (GUIDED)")
-    print("Use this ONLY when no point is given.\n")
+    print("\nDERIVATIVE f'(x) USING DEFINITION (GUIDED)")
+    print("Use when asked for f'(x), not at a single point.\n")
 
     expr = input("Enter f(x): ")
 
-    print("\n--- STEP-BY-STEP SETUP (WRITE THIS ON YOUR PAPER) ---\n")
+    print("\n--- WRITE THIS ---")
+    print("1) f'(x) = lim h->0 [ f(x+h) - f(x) ] / h")
 
-    print("Step 1: Write the definition")
-    print("f'(x) = lim h→0 [ f(x + h) − f(x) ] / h\n")
+    sub = expr.replace("x", "(x+h)")
+    print("2) f'(x) = lim h->0 [ (" + sub + ") - (" + expr + ") ] / h")
 
-    print("Step 2: Substitute f(x)")
-    print("f'(x) = lim h→0 [ (" + expr.replace("x", "(x+h)") + ") − (" + expr + ") ] / h\n")
+    print("3) Expand (x+h) part by hand")
+    print("4) Combine like terms")
+    print("5) Factor out h")
+    print("6) Cancel h")
+    print("7) Plug in h = 0")
 
-    print("Step 3: Expand (DO THIS BY HAND)")
-    print("Expand the expression with (x + h).")
-    print("Then subtract f(x).\n")
-
-    print("Step 4: Simplify")
-    print("Combine like terms.")
-    print("Factor out h.\n")
-
-    print("Step 5: Cancel h")
-    print("Cancel h from numerator and denominator.\n")
-
-    print("Step 6: Take the limit")
-    print("Let h → 0.\n")
-
-    # Known common results (confidence booster)
+    # Quick confidence boosters
     if expr == "x^2":
-        print("Final Answer:")
-        print("f'(x) = 2x")
+        print("\nCommon result: f'(x) = 2x")
     elif expr == "x^3":
-        print("Final Answer:")
-        print("f'(x) = 3x^2")
+        print("\nCommon result: f'(x) = 3x^2")
     elif expr == "sqrt(x)":
-        print("Final Answer:")
-        print("f'(x) = 1 / (2√x)")
+        print("\nCommon result: f'(x) = 1/(2*sqrt(x))")
     elif expr == "1/x":
-        print("Final Answer:")
-        print("f'(x) = -1/x^2")
-    else:
-        print("Final Answer:")
-        print("Simplify fully to obtain f'(x).\n")
+        print("\nCommon result: f'(x) = -1/x^2")
 
-    input("\nPress ENTER to return to menu...")
-
+    pause()
 
 
 def tangent_line_tool():
     print("\nTANGENT LINE at x = a")
     expr = input("Enter expression in x: ")
-    a = float(input("Enter a: "))
+
+    try:
+        a = float(input("Enter a: "))
+    except:
+        print("Invalid a.")
+        pause()
+        return
 
     y = function_value(expr, a)
     m = derivative_at(expr, a)
 
     if y is None or m is None:
         print("Error: Could not compute tangent line.")
-        input("\nPress ENTER to return to menu...")
+        pause()
         return
 
-    print("\n--- STEP-BY-STEP SOLUTION ---")
-
-    print("Step 1: Identify the function")
-    print("f(x) =", expr)
-
-    print("\nStep 2: Find the point on the curve")
-    print("x =", a)
-    print("y = f(a) =", round(y, 6))
-
-    print("\nStep 3: Find the slope using the derivative")
-    print("Slope m =", round(m, 6))
-
-    print("\nStep 4: Use point–slope form")
-    print("y - {} = {}(x - {})".format(round(y, 6), round(m, 6), a))
-
-    # Compute intercept
     b = y - m * a
 
-    print("\nStep 5: Write in slope–intercept form")
+    print("\n--- STEP-BY-STEP ---")
+    print("Step 1: f(x) =", expr)
+    print("Step 2: Point is (" + str(a) + ", " + str(round(y, 6)) + ")")
+    print("Step 3: Slope m = f'(a) ~= " + str(round(m, 6)))
 
+    print("\nPoint-slope form:")
+    print("y - " + str(round(y, 6)) + " = " + str(round(m, 6)) + "(x - " + str(a) + ")")
+
+    print("\nSlope-intercept form:")
     if b < 0:
-        print("y = {}x - {}".format(round(m, 6), round(abs(b), 6)))
+        print("y = " + str(round(m, 6)) + "x - " + str(round(abs(b), 6)))
     else:
-        print("y = {}x + {}".format(round(m, 6), round(b, 6)))
+        print("y = " + str(round(m, 6)) + "x + " + str(round(b, 6)))
 
-    input("\nPress ENTER to return to menu...")
-    
-    
+    print("\nWRITE THIS:")
+    print("1) f(a) = " + str(round(y, 6)))
+    print("2) f'(a) ~= " + str(round(m, 6)))
+    print("3) Point: (" + str(a) + ", " + str(round(y, 6)) + ")")
+    print("4) Tangent line formula: y - f(a) = f'(a)(x - a)")
+    print("   y - " + str(round(y, 6)) + " = " + str(round(m, 6)) + "(x - " + str(a) + ")")
+
+
+    pause()
+
+
 def velocity_tool():
     print("\nVELOCITY / INSTANTANEOUS RATE OF CHANGE")
-    print("Using the definition (limit of secant slopes)")
+    print("Definition: lim h->0 [f(a+h) - f(a)] / h")
 
     expr = input("Enter function f(x): ")
-    a = float(input("Enter the point a: "))
 
-    print("")
-    print("--- STEP-BY-STEP SOLUTION ---")
-
-    print("Step 1: Write the definition")
-    print("Instantaneous rate at a = lim h->0 [f(a+h) - f(a)] / h")
-
-    # Evaluate f(a)
-    fa = eval_function(expr, a)
-    if fa is None:
-        print("Error: f(a) is undefined.")
-        input("Press ENTER to return...")
+    try:
+        a = float(input("Enter the point a: "))
+    except:
+        print("Invalid a.")
+        pause()
         return
 
-    print("")
-    print("Step 2: Evaluate f(a)")
-    print("f(" + str(a) + ") = " + str(fa))
-
-    print("")
-    print("Step 3: Compute secant slopes near a")
+    fa = eval_expr(expr, a)
+    if fa is None:
+        print("Error: f(a) is undefined.")
+        pause()
+        return
 
     hs = [0.1, 0.01, 0.001, 0.0001]
     last_slope = None
 
+    print("\nSlopes near a =", a)
     for h in hs:
-        f_ah = eval_function(expr, a + h)
+        f_ah = eval_expr(expr, a + h)
         if f_ah is None:
-            print("h = " + str(h) + " slope = undefined")
+            print("h =", h, " slope = undefined")
             continue
-
         slope = (f_ah - fa) / h
         last_slope = slope
-        print("h = " + str(h) + "  slope ≈ " + str(slope))
+        print("h =", h, " slope ~= ", round(slope, 6))
 
-    print("")
-    print("Step 4: Take the limit")
-
+    print("\nConclusion:")
     if last_slope is None:
         print("Not enough data to estimate the limit.")
     else:
-        print("As h -> 0, the slope approaches:")
-        print("Instantaneous rate at a =", round(last_slope, 6))
+        print("Instantaneous rate at a ~= " + str(round(last_slope, 6)))
 
-    input("\nPress ENTER to return to menu...")
+        # Paper-ready work using smallest h
+        h = hs[-1]
+        f_ah = eval_expr(expr, a + h)
+        if f_ah is not None:
+            print("\nWRITE THIS:")
+            print("Velocity at a approx [f(a+h) - f(a)] / h")
+            print("a = " + str(a) + ", h = " + str(h))
+            expr_ah = expr.replace("x", str(a + h))
+            expr_a  = expr.replace("x", str(a))
+            print("f(a+h) = f(" + str(a + h) + ") = " + expr_ah)
+            print("f(a)   = f(" + str(a) + ") = " + expr_a)
+            print("f(a+h) approx " + str(round(f_ah, 6)))
+            print("f(a)   approx " + str(round(fa, 6)))
+            print("Velocity approx (" + str(round(f_ah - fa, 6)) + ") / (" + str(h) + ")")
+            print("Velocity approx " + str(round((f_ah - fa) / h, 6)))
+
+
+
+    pause()
 
 
 def quick_chooser():
-    print("\nWHAT DOES THE PROBLEM GIVE YOU?\n")
-
-    print("1) A GRAPH")
-    print("2) A FORMULA with lim x→a")
-    print("3) Slope / derivative at x = a")
-    print("4) Use the DEFINITION of derivative")
-    print("5) Tangent line equation")
-    print("6) Velocity / rate of change")
-    print("7) Go back\n")
+    print("\nCHOOSE THE RIGHT TOOL\n")
+    print("1) Given a GRAPH")
+    print("2) Given a FORMULA with lim x->a")
+    print("3) Need slope / derivative at x=a")
+    print("4) Must use derivative DEFINITION")
+    print("5) Need tangent line equation")
+    print("6) Says velocity / rate of change")
+    print("7) Back\n")
 
     choice = input("Choose: ")
 
@@ -420,21 +562,20 @@ def quick_chooser():
         return
 
 
-
-
-
-
+# ================================
+# Main Menu
+# ================================
 
 def main():
     while True:
         print("\n\nCalculus I Buddy")
-        print("By ScienTiz\n\n")
-        print("1) Limit  Calculator x -> a")
-        print("2) Limit from a Graph: Guided")
-        print("3) Derivatives Solver f'(a)")
-        print("4) Derivatives: Guide")
+        print("By ScienTiz\n")
+        print("1) Limit Calculator x->a")
+        print("2) Limit from a Graph (Guided)")
+        print("3) Derivative Solver f'(a)")
+        print("4) Derivative Guide (Definition)")
         print("5) Tangent line at x=a")
-        print("6) Velocity / Instantaneous Rate Definition")
+        print("6) Velocity / Rate of Change")
         print("7) Help me choose the right tool")
         print("8) Quit")
 
@@ -461,5 +602,5 @@ def main():
             print("Invalid choice.")
 
 
-
 main()
+
