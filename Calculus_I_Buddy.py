@@ -62,7 +62,6 @@ def _replace_const_token(s, token, repl):
     return out
 
 
-
 def eval_expr(expr, x):
     """
     TI-safe expression evaluator.
@@ -157,12 +156,6 @@ def eval_expr(expr, x):
             print("DEBUG FAIL final:", repr(s))
             print("DEBUG ERROR:", e)
         return None
-
-
-
-
-
-
 
 
 def derivative_at(expr, a):
@@ -397,6 +390,68 @@ def derivative_tool():
     pause()
 
 
+def derivative_from_graph_guided():
+    print("\nDERIVATIVE FROM A GRAPH (GUIDED)")
+    print("Use this when a GRAPH is given and you need f'(a).")
+    print("Pick two points close to x = a and enter them.\n")
+    print("If the graph has a corner, cusp, jump, or endpoint at a, then f'(a) may be DNE.")
+
+
+    try:
+        a = float(input("Enter a (where you want f'(a)): "))
+    except:
+        print("Invalid a.")
+        pause()
+        return
+
+    ans = input("Does the derivative exist at a? (y/n or DNE): ")
+    ans2 = ans.strip()
+
+    if ans2 == "n" or ans2 == "N" or ans2 == "DNE" or ans2 == "dne":
+        print("\nConclusion: f'(" + str(a) + ") is DNE")
+        print("\nWRITE THIS:")
+        print("At x = " + str(a) + ", the graph has a corner/cusp/jump/endpoint, so the derivative does not exist.")
+        pause()
+        return
+
+
+
+    print("\nEnter two points close to a from the graph.")
+    print("Tip: Use symmetric points if possible (a-h and a+h).")
+    print("If a is an endpoint, use one-sided points.\n")
+
+    try:
+        x1 = float(input("Enter x1: "))
+        y1 = float(input("Enter f(x1): "))
+        x2 = float(input("Enter x2: "))
+        y2 = float(input("Enter f(x2): "))
+    except:
+        print("Invalid point input.")
+        pause()
+        return
+
+    if x2 == x1:
+        print("Error: x1 and x2 cannot be the same.")
+        pause()
+        return
+
+    m = (y2 - y1) / (x2 - x1)
+
+    print("\n--- STEP-BY-STEP ---")
+    print("Step 1: You want f'(" + str(a) + ")")
+    print("Step 2: Estimate tangent slope with a secant line using two nearby points.")
+    print("Step 3: Slope m = (y2 - y1) / (x2 - x1)")
+    print("m = (" + str(y2) + " - " + str(y1) + ") / (" + str(x2) + " - " + str(x1) + ")")
+    print("m ~= " + str(round(m, 6)))
+
+    print("\nWRITE THIS:")
+    print("Using two points near x = " + str(a) + ":")
+    print("m = (y2 - y1) / (x2 - x1)")
+    print("m = (" + str(y2) + " - " + str(y1) + ") / (" + str(x2) + " - " + str(x1) + ")")
+    print("f'(" + str(a) + ") approx " + str(round(m, 6)))
+
+    pause()
+
 
 def derivative_definition_guided():
     print("\nDERIVATIVE f'(x) USING DEFINITION (GUIDED)")
@@ -524,11 +579,11 @@ def velocity_tool():
             expr_a  = expr.replace("x", str(a))
             print("f(a+h) = f(" + str(a + h) + ") = " + expr_ah)
             print("f(a)   = f(" + str(a) + ") = " + expr_a)
-            print("f(a+h) approx " + str(round(f_ah, 6)))
-            print("f(a)   approx " + str(round(fa, 6)))
-            print("Velocity approx (" + str(round(f_ah - fa, 6)) + ") / (" + str(h) + ")")
-            print("Velocity approx " + str(round((f_ah - fa) / h, 6)))
-
+            print("f(a+h) approx " + str(round(f_ah, 10)))
+            print("f(a)   approx " + str(round(fa, 10)))
+            print("f(a+h) - f(a) approx " + str(round(f_ah - fa, 10)))
+            print("Velocity approx (" + str(round(f_ah - fa, 10)) + ") / (" + str(h) + ")")
+            print("Velocity approx " + str(round((f_ah - fa) / h, 10)))
 
 
     pause()
@@ -536,27 +591,32 @@ def velocity_tool():
 
 def quick_chooser():
     print("\nCHOOSE THE RIGHT TOOL\n")
-    print("1) Given a GRAPH")
-    print("2) Given a FORMULA with lim x->a")
-    print("3) Need slope / derivative at x=a")
-    print("4) Must use derivative DEFINITION")
-    print("5) Need tangent line equation")
-    print("6) Says velocity / rate of change")
-    print("7) Back\n")
+    print("1) Given a GRAPH limit question")
+    print("2) Given a GRAPH derivative question (need f'(a))")
+    print("3) Given a FORMULA with lim x->a")
+    print("4) Need slope / derivative at x=a (formula)")
+    print("5) Must use derivative DEFINITION")
+    print("6) Need tangent line equation")
+    print("7) Says velocity / rate of change")
+    print("8) Back\n")
+
+
 
     choice = input("Choose: ")
 
     if choice == "1":
         limit_from_graph_guide()
     elif choice == "2":
-        limit_tool()
+        derivative_from_graph_guided()
     elif choice == "3":
-        derivative_tool()
+        limit_tool()
     elif choice == "4":
-        derivative_definition_guided()
+        derivative_tool()
     elif choice == "5":
-        tangent_line_tool()
+        derivative_definition_guided()
     elif choice == "6":
+        tangent_line_tool()
+    elif choice == "7":
         velocity_tool()
     else:
         return
@@ -566,6 +626,7 @@ def quick_chooser():
 # Main Menu
 # ================================
 
+
 def main():
     while True:
         print("\n\nCalculus I Buddy")
@@ -574,10 +635,12 @@ def main():
         print("2) Limit from a Graph (Guided)")
         print("3) Derivative Solver f'(a)")
         print("4) Derivative Guide (Definition)")
-        print("5) Tangent line at x=a")
-        print("6) Velocity / Rate of Change")
-        print("7) Help me choose the right tool")
-        print("8) Quit")
+        print("5) Derivative from a Graph (Guided)")
+        print("6) Tangent line at x=a")
+        print("7) Velocity / Rate of Change")
+        print("8) Help me choose the right tool")
+        print("9) Quit")
+
 
         choice = input("Input # Choice: ")
 
@@ -590,12 +653,14 @@ def main():
         elif choice == "4":
             derivative_definition_guided()
         elif choice == "5":
-            tangent_line_tool()
+            derivative_from_graph_guided()
         elif choice == "6":
-            velocity_tool()
+            tangent_line_tool()
         elif choice == "7":
-            quick_chooser()
+            velocity_tool()
         elif choice == "8":
+            quick_chooser()
+        elif choice == "9":
             print("Goodbye.")
             break
         else:
