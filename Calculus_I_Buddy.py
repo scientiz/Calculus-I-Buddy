@@ -1,5 +1,5 @@
 ﻿
-# Calculus I Buddy v0.3
+# Calculus I Buddy
 #       By ScienTiz github.com/ScienTiz
 #            February 2 2026
 
