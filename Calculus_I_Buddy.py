@@ -391,19 +391,52 @@ def velocity_tool():
     input("\nPress ENTER to return to menu...")
 
 
+def quick_chooser():
+    print("\nWHAT DOES THE PROBLEM GIVE YOU?\n")
+
+    print("1) A GRAPH")
+    print("2) A FORMULA with lim x→a")
+    print("3) Slope / derivative at x = a")
+    print("4) Use the DEFINITION of derivative")
+    print("5) Tangent line equation")
+    print("6) Velocity / rate of change")
+    print("7) Go back\n")
+
+    choice = input("Choose: ")
+
+    if choice == "1":
+        limit_from_graph_guide()
+    elif choice == "2":
+        limit_tool()
+    elif choice == "3":
+        derivative_tool()
+    elif choice == "4":
+        derivative_definition_guided()
+    elif choice == "5":
+        tangent_line_tool()
+    elif choice == "6":
+        velocity_tool()
+    else:
+        return
+
+
+
+
+
 
 
 def main():
     while True:
-        print("\n\nCalculus Solver")
+        print("\n\nCalculus I Buddy")
         print("By ScienTiz\n\n")
-        print("1) Limit Calculator x -> a")
-        print("2) Limit From a Graph: Guided")
-        print("3) Derivative Calculator f'(a)")
-        print("4) Derivatives: Guided")
+        print("1) Limit  Calculator x -> a")
+        print("2) Limit from a Graph: Guided")
+        print("3) Derivatives Solver f'(a)")
+        print("4) Derivatives: Guide")
         print("5) Tangent line at x=a")
         print("6) Velocity / Instantaneous Rate Definition")
-        print("7) Quit")
+        print("7) Help me choose the right tool")
+        print("8) Quit")
 
         choice = input("Input # Choice: ")
 
@@ -420,6 +453,8 @@ def main():
         elif choice == "6":
             velocity_tool()
         elif choice == "7":
+            quick_chooser()
+        elif choice == "8":
             print("Goodbye.")
             break
         else:
