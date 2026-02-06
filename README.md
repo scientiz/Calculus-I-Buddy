@@ -1,126 +1,142 @@
-﻿# Calculus I Buddy
+﻿# Calculus Buddy
 
 **By ScienTiz**  
 February 2026  
+GitHub: https://github.com/ScienTiz/Calculus-Buddy
 
-Calculus I Buddy is a **step-by-step learning tool** designed to help students *understand* and *show* their work for core Calculus I topics, not just compute answers.
+Calculus Buddy is a **step-by-step learning tool** built for the **TI-Nspire CX II CAS Python** environment. It helps you understand and **show work like you would on paper** for core Calculus topics.
 
-It is intentionally built to mirror how solutions are written on paper in a typical Calculus I course.
+This is not meant to replace a CAS. It is meant to teach the workflow and give paper-ready structure.
 
 ---
 
-## Purpose
+## What’s New in the Current Build
 
-This tool is meant to:
-- Reinforce conceptual understanding
-- Walk through limits, derivatives, tangent lines, and velocity step by step
-- Provide **paper-ready “WRITE THIS” sections** that match instructor expectations
-- Help students practice *how* to present work, not just get the result
+- **Tiered menus (no scrolling needed)**
+- **ENTER to go back** in menus and step pages
+- **Display mode toggle**
+  - `paged` pauses between sections (best for learning)
+  - `compact` prints straight through (best for speed)
 
-This is **not** a symbolic CAS replacement.  
-It is a guided numerical and conceptual assistant.
+---
+
+## Features
+
+### Tiered Menus
+Main menu:
+- Limits
+- Derivatives
+- Applications
+- Chain Rule
+- Helpers
+
+Each section opens a smaller menu so the TI screen never needs scrolling.
 
 ---
 
 ## Supported Topics
 
-### 1. Limits (Formula-Based)
-- Left-hand and right-hand numerical checks
-- Explicit comparison of values approaching `a`
-- Clear conclusions:
-  - Limit exists
-  - Limit does not exist (DNE)
-  - Divergence behavior
+### 1) Limits (Graph and Numeric)
+**Limits from a Graph (Guided)**
+- You enter left-hand and right-hand behavior
+- Separates limit value vs function value `f(a)`
+- Outputs a clear final conclusion
 
-**Shows work by:**
-- Listing values near `a`
-- Comparing left vs right
-- Writing a short justification in plain language
+**Limit Calculator x → a (Numeric Check)**
+- Samples left and right values using decreasing `dx`
+- Flags one-sided undefined behavior
+- Includes a **WRITE THIS** block for paper-style justification
 
----
-
-### 2. Limits from a Graph (Guided)
-- User supplies left-hand and right-hand behavior
-- Separates:
-  - Limit value
-  - Function value `f(a)`
-- Matches how graph-based limit questions are graded
+**Algebraic Limit Helper (Hand Steps)**
+- Walks through what to try when you get `0/0`
+  - factoring
+  - conjugates
+  - cancellation
+  - infinite limit behavior
 
 ---
 
-### 3. Derivative at a Point `f'(a)` (Numeric Estimate)
-- Uses the symmetric difference quotient
+### 2) Derivatives
+
+**Derivative Solver `f'(a)` (Numeric Estimate)**
+- Symmetric difference quotient
 - Shows slopes for decreasing `h`
-- Clearly states the limiting behavior
+- Includes **WRITE THIS** substitution and evaluation steps
 
-**WRITE THIS section includes:**
-- The difference quotient formula
-- Substitution of values
-- Numerical evaluation
-- Final approximation
+**Derivative Using the Definition (Guided Outline)**
+- Prints the correct structure:
+  - write definition
+  - substitute `x+h`
+  - expand
+  - factor
+  - cancel
+  - plug in `h = 0`
+- Intentionally does not do algebra for you
 
-This matches common Calculus I “estimate the derivative” problems.
+**Tangent Line at `x = a`**
+- Computes `(a, f(a))` and slope `f'(a)`
+- Prints point-slope and slope-intercept form
+- Includes **WRITE THIS** steps that match class format
 
----
-
-### 4. Derivative Using the Definition (Guided)
-- Designed for problems that *require* the limit definition
-- Outputs a structured outline:
-  - Write the definition
-  - Substitute `x + h`
-  - Expand
-  - Factor
-  - Cancel
-  - Evaluate
-
-This section intentionally avoids algebra automation to force learning.
+**Derivative from a Graph (Guided)**
+- Uses two nearby points to estimate slope
+- Also supports “DNE at a” with a clean explanation template
 
 ---
 
-### 5. Tangent Line at `x = a`
-- Computes:
-  - Point `(a, f(a))`
-  - Slope `f'(a)`
-- Displays both:
-  - Point-slope form
-  - Slope-intercept form
+### 3) Applications
 
-**WRITE THIS focuses on:**
-- Identifying `f(a)` and `f'(a)`
-- Writing the tangent line formula
-- Plugging values into the standard equation
-
-This mirrors how instructors expect tangent-line solutions to be written.
+**Velocity / Instantaneous Rate of Change**
+- Uses the forward difference quotient
+- Shows slope estimates for decreasing `h`
+- Includes a paper-ready **WRITE THIS** block
 
 ---
 
-### 6. Velocity / Instantaneous Rate of Change
-- Uses the forward difference quotient:
-	lim h→0 [f(a+h) − f(a)] / h
-- Shows slopes for decreasing `h`
-- Separates numerical estimation from explanation
+### 4) Chain Rule
 
-**WRITE THIS section includes:**
-- The velocity formula
-- Substitution of `a` and `h`
-- Function evaluation
-- Final rate approximation
-
-Works cleanly for:
-- `sin(x)` at `0`
-- `ln(x)` at `1`
-- Polynomial motion problems
+**Chain Rule Solver (Symbolic + Steps)**
+- Supports: `+ - * / ^`, `sin cos tan ln sqrt exp`, constants `e pi`, variable `x`
+- Handles `e^(...)` by rewriting to `exp(...)`
+- Prints:
+  - normalized expression
+  - rule steps used (product, quotient, chain, power-chain)
+  - **WRITE THIS** final derivative
+- Includes an optional “show work” style chain-of-variables output when it is a clean single composition
 
 ---
 
-## Design Philosophy
+### 5) Helpers
 
-- **Readable output over compact math**
-- **Explicit substitutions**
-- **Minimal symbolic magic**
-- **Aligned with grading rubrics**
+**Rule Helper (Auto Detect)**
+- Inspects an expression and identifies likely rule usage:
+  - sum/difference
+  - product
+  - quotient
+  - chain/composition
+- Prints typical rule order and the recommended tool
 
-If a professor asked “show your work,” this tool is designed so the output can be copied directly and rewritten neatly by hand.
+**Rule Helper Tests**
+- Runs a small built-in test set so you can sanity check detection quickly
+
+**Help Me Choose the Right Tool**
+- A tiered decision menu that routes you to the right solver without needing to scroll
+
+---
+
+## Expression Input Notes
+
+Supported operators and functions:
+- `+ - * / ^`
+- `sin(x) cos(x) tan(x) ln(x) sqrt(x) exp(x)`
+- constants: `pi`, `e`
+- variable: `x`
+
+Input tips:
+- Use `ln(x)` not `log(x)`
+- `e^(...)` is supported (rewritten to `exp(...)`)
+- Implicit multiplication is supported in many common forms:
+  - `3x`, `2(x+1)`, `(x+1)(x-1)`, `2sin(x)`, `xcos(x)`, `pi x`
 
 ---
 
@@ -128,13 +144,12 @@ If a professor asked “show your work,” this tool is designed so the output c
 
 Designed for:
 - **TI-Nspire CX II CAS Python**
-- Python 3.4-ish subset
+- Python subset around **3.4**
 
 Constraints respected:
 - No f-strings
-- No Unicode math symbols
+- Avoid Unicode math symbols (accepts some TI symbols but normalizes)
 - `math` module only
-- Explicit indentation and control flow
 
 ---
 
@@ -142,7 +157,7 @@ Constraints respected:
 
 All rights reserved.
 
-This repository is published for **educational and portfolio purposes only**.  
+This repository is published for educational and portfolio purposes only.  
 No permission is granted to copy, modify, distribute, or use this code without explicit written permission from the author.
 
 ---
