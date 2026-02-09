@@ -481,6 +481,16 @@ def _normalize_expr_for_symbolic(expr):
     s = s.replace("ex*p(", "exp(")
     s = s.replace("ex*p", "exp")
 
+
+    # Shorthand: sinx, cosx, tanx, lnx -> sin(x), cos(x), tan(x), ln(x)
+    # (common TI input habit)
+    s = s.replace("sinx", "sin(x)")
+    s = s.replace("cosx", "cos(x)")
+    s = s.replace("tanx", "tan(x)")
+    s = s.replace("lnx", "ln(x)")
+    s = s.replace("sqrtx", "sqrt(x)")
+    s = s.replace("expx", "exp(x)")
+    
     return s
 
 def _tokenize(s):
@@ -636,39 +646,41 @@ class _Parser:
             return N_un("-", self.unary())
         return self.primary()
 
-    def primary(self):
-        t = self.peek()
-        if t is None:
-            return None
+        def primary(self):
+            t = self.peek()
+            if t is None:
+                return None
 
-        if _is_number_token(t):
-            self.i += 1
-            return N_num(t)
+            if _is_number_token(t):
+                self.i += 1
+                return N_num(t)
 
-        if _is_name_token(t):
-            self.i += 1
-            name = t
+            if _is_name_token(t):
+                self.i += 1
+                name = t
 
-            if self.peek() == "(" and _is_supported_func(name):
+                # Treat ANY name followed by "(" as a function call: f(x), g(x), etc.
+                if self.peek() == "(":
+                    self.i += 1
+                    inside = self.expr()
+                    if not self.eat(")"):
+                        return None
+                    return N_fun(name, inside)
+
+                if name == "x":
+                    return N_var()
+
+                return N_name(name)
+
+            if t == "(":
                 self.i += 1
                 inside = self.expr()
                 if not self.eat(")"):
                     return None
-                return N_fun(name, inside)
+                return inside
 
-            if name == "x":
-                return N_var()
+            return None
 
-            return N_name(name)
-
-        if t == "(":
-            self.i += 1
-            inside = self.expr()
-            if not self.eat(")"):
-                return None
-            return inside
-
-        return None
 
 def _needs_parens_for_div(s):
     if s is None or len(s) == 0:
@@ -840,6 +852,12 @@ def _d(node, steps):
             steps.append("Chain: exp -> exp(u)*u'")
             return N_bin("*", N_fun("exp", u), du)
 
+        # Unknown/abstract function: f(u) -> f'(u) * u'
+        # Example: d/dx f(x) = f'(x)
+        steps.append("Chain: " + fn + "(u) -> " + fn + "'(u)*u'")
+        return N_bin("*", N_name(fn + "'(" + _to_str(u) + ")"), du)
+
+
     return N_num("0")
 
 def _simplify_str(s):
@@ -883,7 +901,8 @@ def _simplify_str(s):
 
         s = s.replace("*(1)", "")
         s = s.replace("(1)*", "")
-        s = s.replace("*1", "")
+        s = s.replace("*1+", "+")
+        s = s.replace("+1*", "+")
         s = s.replace("1*", "")
 
         s = _strip_standalone_zero_terms(s)
@@ -908,6 +927,13 @@ def _simplify_str(s):
         s = s.replace("x^1", "x")
         s = s.replace("(x)^1", "x")
         s = s.replace("x^0", "1")
+
+        # cancel simple x*(1/x) patterns
+        s = s.replace("x*(1/x)", "1")
+        s = s.replace("(1/x)*x", "1")
+        s = s.replace("x*1/x", "1")
+        s = s.replace("1/x*x", "1")
+
 
     return s
 
@@ -984,6 +1010,8 @@ def _self_check():
         "_d",
         "_to_str",
         "_simplify_str",
+        "unknown_f_product_tool",
+        "unknown_f_composition_tool"
     ]
 
     missing = []
@@ -1323,6 +1351,148 @@ def derivative_steps_auto():
           "f(x)  = " + f_str,
           "f'(x) = " + d_str], True)
 
+def unknown_f_product_tool():
+    print("\nUNKNOWN FUNCTION PRODUCT TOOL")
+    print("Form: g(x) = f(x) * h(x)")
+    print("You provide: h(x), a, f(a), f'(a)")
+    pause()
+
+    h_expr = input("Enter h(x) in terms of x (ex: ln(x), sin(x), x^2+1): ").strip()
+
+    try:
+        a = float(input("Enter a: "))
+    except:
+        print("Invalid a.")
+        pause()
+        return
+
+    try:
+        f_a = float(input("Enter f(a): "))
+        fp_a = float(input("Enter f'(a): "))
+    except:
+        print("Invalid f(a) or f'(a). Use numbers.")
+        pause()
+        return
+
+    h_a = eval_expr(h_expr, a)
+    if h_a is None:
+        print("Could not evaluate h(a). Check h(x) input.")
+        pause()
+        return
+
+    hp_a = derivative_at(h_expr, a)
+    if hp_a is None:
+        print("Could not estimate h'(a). Check h(x) input.")
+        pause()
+        return
+
+    gprime_a = fp_a * h_a + f_a * hp_a
+
+    print("\n--- WRITE THIS ---")
+    print("Given g(x) = f(x) * h(x)")
+    print("g'(x) = f'(x)h(x) + f(x)h'(x)")
+    print("At a = " + str(a) + ":")
+    print("g'(a) = f'(a)*h(a) + f(a)*h'(a)")
+    print("h(a) ~= " + str(round(h_a, 10)))
+    print("h'(a) ~= " + str(round(hp_a, 10)))
+    print("g'(a) ~= " + str(round(gprime_a, 10)))
+    pause()
+
+def unknown_f_composition_tool():
+    print("\nUNKNOWN FUNCTION COMPOSITION TOOL")
+    print("Form: g(x) = f(h(x))")
+    print("You provide: h(x), a, and the given value f'(h(a))")
+    pause()
+
+    h_expr = input("Enter h(x) in terms of x (ex: x^2+1, 3x-5, ln(x)): ").strip()
+
+    try:
+        a = float(input("Enter a: "))
+    except:
+        print("Invalid a.")
+        pause()
+        return
+
+    # compute h(a)
+    h_a = eval_expr(h_expr, a)
+    if h_a is None:
+        print("Could not evaluate h(a). Check h(x) input.")
+        pause()
+        return
+
+    try:
+        fprime_at_ha = float(input("Enter the GIVEN value f'(h(a)) (a number): "))
+    except:
+        print("Invalid f'(h(a)). Use a number from the problem.")
+        pause()
+        return
+
+    # compute h'(a)
+    hp_a = derivative_at(h_expr, a)
+    if hp_a is None:
+        print("Could not estimate h'(a). Check h(x) input.")
+        pause()
+        return
+
+    gprime_a = fprime_at_ha * hp_a
+
+    print("\n--- WRITE THIS ---")
+    print("Given g(x) = f(h(x))")
+    print("g'(x) = f'(h(x)) * h'(x)")
+    print("At a = " + str(a) + ":")
+    print("h(a) ~= " + str(round(h_a, 10)))
+    print("h'(a) ~= " + str(round(hp_a, 10)))
+    print("g'(a) = f'(h(a)) * h'(a)")
+    print("g'(a) ~= " + str(round(gprime_a, 10)))
+    pause()
+
+def gx_from_fx_tool():
+    print("\nG(x) FROM F(x) HELPER (SYMBOLIC)")
+    print("Type g(x) using x, + - * / ^, and functions like ln(x), sin(x).")
+    print("You can also use unknown functions like f(x), g(x), h(x).")
+    print("\nExample: f(x)*ln(x)")
+    pause()
+
+    raw = input("Enter g(x): ")
+    s = _normalize_expr_for_symbolic(raw)
+
+    print("Normalized:", s)
+    pause()
+
+    toks = _tokenize(s)
+    if toks is None:
+        print("Tokenizer failed. Check your input.")
+        pause()
+        return
+
+    p = _Parser(toks)
+    ast = p.parse()
+    if ast is None:
+        print("Parse failed. Check parentheses and spelling.")
+        pause()
+        return
+
+    steps = []
+    d_ast = _d(ast, steps)
+
+    g_str = _to_str(ast)
+    gp_str = _simplify_str(_to_str(d_ast))
+
+    print("\n--- RESULT ---")
+    print("g(x)  = " + g_str)
+    print("g'(x) = " + gp_str)
+    pause()
+
+    a = input("If you need g'(a), enter a (or press ENTER to skip): ").strip()
+    if a == "":
+        return
+
+    print("\n--- PLUG IN ---")
+    print("g'(" + a + ") = " + gp_str.replace("x", "(" + a + ")"))
+    print("\nIf your problem gives values like f(" + a + ") and f'(" + a + "),")
+    print("sub them directly into the expression above.")
+    pause()
+
 def derivative_tool():
     print("\nDERIVATIVE: f'(a) (numeric estimate)")
     expr = input("Enter expression in x: ")
@@ -1577,6 +1747,8 @@ def menu_derivatives():
         print("3) Must use derivative DEFINITION steps")
         print("4) Tangent line at x=a")
         print("5) Derivative from a Graph (Guided)")
+        print("6) g(x) from f(x) Helper (symbolic)")
+
         print("\nPress ENTER to go back")
 
         c = _menu_choice("Choice: ")
@@ -1592,6 +1764,9 @@ def menu_derivatives():
             tangent_line_tool()
         elif c == "5":
             derivative_from_graph_guided()
+        elif c == "6":
+            gx_from_fx_tool()
+
         else:
             print("Invalid choice.")
             pause()
@@ -1600,6 +1775,8 @@ def menu_applications():
     while True:
         print("\nAPPLICATIONS")
         print("1) Velocity / Rate of Change")
+        print("2) Unknown f(x): Product  g(x)=f(x)*h(x)")
+        print("3) Unknown f(x): Chain    g(x)=f(h(x))")
         print("\nPress ENTER to go back")
 
         c = _menu_choice("Choice: ")
@@ -1607,9 +1784,14 @@ def menu_applications():
             return
         elif c == "1":
             velocity_tool()
+        elif c == "2":
+            unknown_f_product_tool()
+        elif c == "3":
+            unknown_f_composition_tool()
         else:
             print("Invalid choice.")
             pause()
+
 
 # ================================
 # Main Menu
