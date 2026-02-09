@@ -1,16 +1,15 @@
-﻿#              Calculus Buddy
-#               By ScienTiz 
+﻿#              Calculus Buddy (BETA BRANCH)
+#               By ScienTiz
 #       https://github.com/ScienTiz/Calculus-Buddy
 
 # Designed for TI-Nspire CX II CAS Python environment
 
 # TI-NSPIRE CX II CAS COMPATIBILITY NOTES:
-    # - No f-strings
-    # - Avoid Unicode symbols (use x->a, h->0)
-    # - Math module only
-    # - Python ~3.4 subset
+# - No f-strings
+# - Avoid Unicode symbols (use x->a, h->0)
+# - Math module only
+# - Python ~3.4 subset
 
-# Import math module only
 import math
 
 # View mode toggle
@@ -25,27 +24,18 @@ def pause(msg="Press ENTER to continue..."):
         input("\n" + msg)
 
 def _is_alnum_or_underscore(ch):
-    # TI-safe replacement for str.isalnum()
     if ch == "_":
         return True
     o = ord(ch)
-    # 0-9
     if 48 <= o <= 57:
         return True
-    # A-Z
     if 65 <= o <= 90:
         return True
-    # a-z
     if 97 <= o <= 122:
         return True
     return False
 
 def _replace_const_token(s, token, repl):
-    """
-    Replace constants like pi, e only when token is not part of a larger word.
-    Example: replace 'pi' in '2*pi' but not in 'pilot'
-    TI-safe: does not use isalnum().
-    """
     out = ""
     i = 0
     n = len(s)
@@ -65,11 +55,6 @@ def _replace_const_token(s, token, repl):
     return out
 
 def eval_expr(expr, x):
-    """
-    TI-safe expression evaluator.
-    Supports conservative implicit multiplication:
-    3x, 2(x+1), (x+1)(x-1), pi*x, 2sin(x), xsin(x), (x+1)sin(x)
-    """
     DEBUG = False
 
     def _is_digit(ch):
@@ -82,23 +67,19 @@ def eval_expr(expr, x):
 
     try:
         s = expr.strip()
-
-        # Normalize TI characters
         s = s.replace(" ", "")
-        s = s.replace(u"\u00d7", "*")   # ×
-        s = s.replace(u"\u00b7", "*")   # ·
-        s = s.replace(u"\u2219", "*")   # ∙
-        s = s.replace(u"\u22c5", "*")   # ⋅
-        s = s.replace(u"\u2022", "*")   # •
-        s = s.replace(u"\u2212", "-")   # −
-        s = s.replace(u"\u03c0", "pi")  # π
-        s = s.replace(u"\u03a0", "pi")  # Π
+        s = s.replace(u"\u00d7", "*")
+        s = s.replace(u"\u00b7", "*")
+        s = s.replace(u"\u2219", "*")
+        s = s.replace(u"\u22c5", "*")
+        s = s.replace(u"\u2022", "*")
+        s = s.replace(u"\u2212", "-")
+        s = s.replace(u"\u03c0", "pi")
+        s = s.replace(u"\u03a0", "pi")
 
-        # Normalize common constant spellings
         s = s.replace("PI", "pi")
         s = s.replace("Pi", "pi")
 
-        # Implicit multiplication pass (simple, reliable)
         out = ""
         n = len(s)
         i = 0
@@ -109,61 +90,38 @@ def eval_expr(expr, x):
             if i < n - 1:
                 b = s[i + 1]
 
-                # digit followed by x or (
                 if _is_digit(a) and (b == "x" or b == "("):
                     out += "*"
-
-                # x followed by digit or (
                 elif a == "x" and (_is_digit(b) or b == "("):
                     out += "*"
-
-                # ) followed by digit or x or (
                 elif a == ")" and (_is_digit(b) or b == "x" or b == "("):
                     out += "*"
-
-                # digit followed by p (for 2pi)
                 elif _is_digit(a) and b == "p":
                     out += "*"
-
-                # x followed by p (for xpi)
                 elif a == "x" and b == "p":
                     out += "*"
-
-                # pi followed by x (pix -> pi*x)
                 elif a == "i" and b == "x" and i > 0 and s[i - 1] == "p":
                     out += "*"
-
-                # digit followed by e (2e ...), BUT avoid scientific notation like 1e-5
                 elif _is_digit(a) and b == "e":
                     if i + 2 < n:
                         c = s[i + 2]
-                        # if next is digit or sign, assume scientific notation and do NOT insert *
                         if (c == "+" or c == "-" or _is_digit(c)):
                             pass
                         else:
                             out += "*"
                     else:
                         out += "*"
-
-                # x or ) followed by e (xe, (x+1)e)
                 elif (a == "x" or a == ")") and b == "e":
                     out += "*"
-
-                # digit/x/) followed by a letter (2sin, xsin, (x+1)sin)
                 elif (_is_digit(a) or a == "x" or a == ")") and _is_letter(b):
                     out += "*"
 
             i += 1
 
         s = out
-
-        # Fix pi( ... ) case (pi(x+1) -> pi*(x+1))
         s = s.replace("pi(", "pi*(")
-
-        # Power
         s = s.replace("^", "**")
 
-        # Functions
         s = s.replace("sin(", "math.sin(")
         s = s.replace("cos(", "math.cos(")
         s = s.replace("tan(", "math.tan(")
@@ -171,7 +129,6 @@ def eval_expr(expr, x):
         s = s.replace("ln(", "math.log(")
         s = s.replace("exp(", "math.exp(")
 
-        # Constants (token-safe)
         s = _replace_const_token(s, "pi", "math.pi")
         s = _replace_const_token(s, "e", "math.e")
 
@@ -179,7 +136,6 @@ def eval_expr(expr, x):
             print("DEBUG expr:", repr(expr))
             print("DEBUG final:", repr(s))
 
-        # safer eval: no builtins
         return eval(s, {"__builtins__": None, "math": math}, {"x": x})
 
     except Exception as e:
@@ -209,9 +165,6 @@ def _is_small_int(s):
     return True
 
 def _binom_coeffs(n):
-    # returns coeffs for (x+h)^n = sum_{k=0..n} C(n,k) x^(n-k) h^k
-    # n is small (2..6 typically)
-    # simple Pascal triangle
     row = [1]
     i = 0
     while i < n:
@@ -223,17 +176,10 @@ def _binom_coeffs(n):
         new.append(1)
         row = new
         i += 1
-    return row  # length n+1
+    return row
 
 def _poly_diff_factored_form_power(n):
-    """
-    Builds the classic identity:
-      (x+h)^n - x^n = h * [C(n,1)x^(n-1) + C(n,2)x^(n-2)h + ... + h^(n-1)]
-    Returns inside string (the bracket), TI-style with ^.
-    """
-    coeffs = _binom_coeffs(n)  # C(n,k)
-    # we want terms for k = 1..n : C(n,k) x^(n-k) h^k
-    # after factoring h: k becomes (k-1) on h
+    coeffs = _binom_coeffs(n)
     terms = []
     k = 1
     while k <= n:
@@ -241,7 +187,6 @@ def _poly_diff_factored_form_power(n):
         x_pow = n - k
         h_pow = k - 1
 
-        # build x piece
         if x_pow == 0:
             x_part = ""
         elif x_pow == 1:
@@ -249,7 +194,6 @@ def _poly_diff_factored_form_power(n):
         else:
             x_part = "x^" + str(x_pow)
 
-        # build h piece (after factoring h)
         if h_pow == 0:
             h_part = ""
         elif h_pow == 1:
@@ -257,7 +201,6 @@ def _poly_diff_factored_form_power(n):
         else:
             h_part = "h^" + str(h_pow)
 
-        # multiply pieces carefully
         piece = ""
         if c != 1:
             piece += str(c) + "*"
@@ -274,7 +217,6 @@ def _poly_diff_factored_form_power(n):
         terms.append(piece)
         k += 1
 
-    # join with +
     out = ""
     i = 0
     while i < len(terms):
@@ -286,12 +228,7 @@ def _poly_diff_factored_form_power(n):
     return out
 
 def _binomial_expand_xh(n):
-    """
-    Returns expansion for (x+h)^n as a TI-style string with ^ and *.
-    Example n=2 -> x^2 + 2*x*h + h^2
-    """
-    coeffs = _binom_coeffs(n)  # C(n,k)
-
+    coeffs = _binom_coeffs(n)
     terms = []
     k = 0
     while k <= n:
@@ -299,7 +236,6 @@ def _binomial_expand_xh(n):
         x_pow = n - k
         h_pow = k
 
-        # x piece
         if x_pow == 0:
             x_part = ""
         elif x_pow == 1:
@@ -307,7 +243,6 @@ def _binomial_expand_xh(n):
         else:
             x_part = "x^" + str(x_pow)
 
-        # h piece
         if h_pow == 0:
             h_part = ""
         elif h_pow == 1:
@@ -315,7 +250,6 @@ def _binomial_expand_xh(n):
         else:
             h_part = "h^" + str(h_pow)
 
-        # coefficient
         piece = ""
         if c != 1:
             piece += str(c) + "*"
@@ -332,7 +266,6 @@ def _binomial_expand_xh(n):
         terms.append(piece)
         k += 1
 
-    # join
     out = ""
     i = 0
     while i < len(terms):
@@ -344,7 +277,6 @@ def _binomial_expand_xh(n):
     return out
 
 def _power_simple_derivative_str(n):
-    # derivative of x^n is n*x^(n-1)
     if n == 2:
         return "2*x"
     if n == 3:
@@ -354,7 +286,6 @@ def _power_simple_derivative_str(n):
     return str(n) + "*x^" + str(n - 1)
 
 def _try_power_of_x(expr):
-    # accepts: x^2, x^3, x^4...
     s = expr.replace(" ", "")
     if len(s) >= 3 and s[0] == "x" and s[1] == "^":
         n_str = s[2:]
@@ -383,22 +314,16 @@ def _is_int_str(s):
     return True
 
 def _int_str_dec(s):
-    # decrement integer string (assumes _is_int_str(s))
     return str(int(s) - 1)
 
 def _menu_choice(prompt):
-    """
-    Menu input helper.
-    ENTER returns "" which we treat as BACK.
-    """
     try:
         return input(prompt).strip()
     except:
         return ""
 
-
 # ================================
-# Chain Rule Engine (Helpers)
+# Chain Rule Engine (Tokenizer + Parser)
 # ================================
 
 def _is_letter(ch):
@@ -414,7 +339,6 @@ def _read_atom(s, i):
     if i >= n:
         return "", i
 
-    # Parenthesized
     if s[i] == "(":
         depth = 1
         j = i + 1
@@ -429,7 +353,6 @@ def _read_atom(s, i):
             j += 1
         return out, j
 
-    # Number
     if _is_digit2(s[i]) or s[i] == ".":
         j = i
         dot_seen = False
@@ -446,18 +369,14 @@ def _read_atom(s, i):
                 break
         return s[i:j], j
 
-    # Name or function call
     if _is_letter(s[i]):
         j = i
         while j < n and (_is_letter(s[j]) or _is_digit2(s[j])):
             j += 1
         name = s[i:j]
-
-        # function call if followed by (...)
         if j < n and s[j] == "(":
-            atom, k = _read_atom(s, j)  # reads "(...)"
+            atom, k = _read_atom(s, j)
             return name + atom, k
-
         return name, j
 
     return s[i], i + 1
@@ -491,26 +410,24 @@ def _rewrite_e_power_to_exp_all(s):
 def _normalize_expr_for_symbolic(expr):
     s = expr.strip()
     s = s.replace(" ", "")
-    s = s.replace(u"\u00d7", "*")   # ×
-    s = s.replace(u"\u00b7", "*")   # ·
-    s = s.replace(u"\u2212", "-")   # −
-    s = s.replace(u"\u03c0", "pi")  # π
-    s = s.replace(u"\u03a0", "pi")  # Π
+    s = s.replace(u"\u00d7", "*")
+    s = s.replace(u"\u00b7", "*")
+    s = s.replace(u"\u2212", "-")
+    s = s.replace(u"\u03c0", "pi")
+    s = s.replace(u"\u03a0", "pi")
     s = s.replace("PI", "pi")
     s = s.replace("Pi", "pi")
 
-    # Rewrite e^... into exp(...)
     s = _rewrite_e_power_to_exp_all(s)
 
     def _is_digit(ch):
         o = ord(ch)
         return 48 <= o <= 57
 
-    def _is_letter(ch):
+    def _is_letter2(ch):
         o = ord(ch)
         return (65 <= o <= 90) or (97 <= o <= 122) or ch == "_"
 
-    # conservative implicit multiplication pass
     out = ""
     n = len(s)
     i = 0
@@ -521,47 +438,29 @@ def _normalize_expr_for_symbolic(expr):
         if i < n - 1:
             b = s[i + 1]
 
-            # digit followed by x or (
             if _is_digit(a) and (b == "x" or b == "("):
                 out += "*"
-
-            # x followed by digit or (
             elif a == "x" and (_is_digit(b) or b == "("):
                 out += "*"
-
-            # ) followed by digit or x or (
             elif a == ")" and (_is_digit(b) or b == "x" or b == "("):
                 out += "*"
-
-            # digit followed by p (2pi)
             elif _is_digit(a) and b == "p":
                 out += "*"
-
-            # x followed by p (xpi)
             elif a == "x" and b == "p":
                 out += "*"
-
-            # pi followed by x  (pix -> pi*x)
             elif a == "i" and b == "x" and i > 0 and s[i - 1] == "p":
                 out += "*"
-
-            # digit/x/) followed by a letter (2sin, xsin, (x+1)sin)
-            elif (_is_digit(a) or a == "x" or a == ")") and _is_letter(b):
+            elif (_is_digit(a) or a == "x" or a == ")") and _is_letter2(b):
                 out += "*"
 
         i += 1
 
     s = out
-
-    # Fix pi( ... ) case (pi(x+1) -> pi*(x+1))
     s = s.replace("pi(", "pi*(")
 
-    # FIX 5Feb2026:
     # protect exp(...) from accidental "ex*p(...)" creation
-    # This can happen due to the implicit-multiplication pass.
     s = s.replace("ex*p(", "exp(")
     s = s.replace("ex*p", "exp")
-
 
     return s
 
@@ -574,7 +473,7 @@ def _tokenize(s):
         o = ord(ch)
         return 48 <= o <= 57
 
-    def is_letter(ch):
+    def is_letter3(ch):
         o = ord(ch)
         return (65 <= o <= 90) or (97 <= o <= 122) or (ch == "_")
 
@@ -602,10 +501,10 @@ def _tokenize(s):
             tokens.append(s[j:i])
             continue
 
-        if is_letter(ch):
+        if is_letter3(ch):
             j = i
             i += 1
-            while i < n and (is_letter(s[i]) or is_digit(s[i])):
+            while i < n and (is_letter3(s[i]) or is_digit(s[i])):
                 i += 1
             tokens.append(s[j:i])
             continue
@@ -646,11 +545,6 @@ def _is_name_token(tok):
 def _is_supported_func(name):
     return name in ["sin", "cos", "tan", "ln", "sqrt", "exp"]
 
-
-# ================================
-# Rule Detection (Auto Helper)
-# ================================
-
 # AST nodes
 def N_num(v): return {"t": "num", "v": v}
 def N_var():  return {"t": "var"}
@@ -658,150 +552,6 @@ def N_name(v):return {"t": "name", "v": v}
 def N_un(op, a): return {"t": "un", "op": op, "a": a}
 def N_bin(op, a, b): return {"t": "bin", "op": op, "a": a, "b": b}
 def N_fun(fn, a): return {"t": "fun", "fn": fn, "a": a}
-
-
-def _has_top_level_op(s, ops):
-    # True if any operator in ops appears at depth 0 (not inside parentheses)
-    depth = 0
-    i = 0
-    while i < len(s):
-        ch = s[i]
-        if ch == "(":
-            depth += 1
-        elif ch == ")":
-            if depth > 0:
-                depth -= 1
-        elif depth == 0 and ch in ops:
-            return True
-        i += 1
-    return False
-
-def _contains_any(s, subs):
-    i = 0
-    while i < len(subs):
-        if subs[i] in s:
-            return True
-        i += 1
-    return False
-
-def _looks_like_chain(s):
-    # Quick heuristic: any of these suggests composition
-    funcs = ["sin(", "cos(", "tan(", "ln(", "sqrt(", "exp("]
-    if _contains_any(s, funcs):
-        return True
-    # power with parentheses is usually chain: ( ... )^n or something^(
-    if ")^" in s:
-        return True
-    # e^(...) should be rewritten earlier, but if not, treat as chain
-    if "e^(" in s or "e^" in s:
-        return True
-    return False
-
-def classify_rules(expr):
-    """
-    Returns a dict:
-    - normalized: cleaned expression string (simple)
-    - has_chain: True/False
-    - has_product: True/False (top-level *)
-    - has_quotient: True/False (top-level /)
-    - has_sumdiff: True/False (top-level + or -)
-    - recommended_order: list of rule names in likely order
-    - recommended_tool: text label (which menu tool)
-    """
-    s = _normalize_expr_for_symbolic(expr)
-
-    # NOTE: do NOT normalize heavily here. This is just for rule detection.
-    # Your chain_rule_tool already normalizes for parsing.
-
-    has_quotient = _has_top_level_op(s, "/")
-    has_product = _has_top_level_op(s, "*")
-    has_sumdiff = _has_top_level_op(s, "+-")
-    has_chain = _looks_like_chain(s)
-
-    order = []
-
-    # Priority: quotient/product at the OUTSIDE, then chain inside pieces
-    if has_quotient:
-        order.append("Quotient rule (outside)")
-    if has_product:
-        order.append("Product rule (outside)")
-
-    # Sum/difference is usually the outside if present at top level
-    if has_sumdiff:
-        order.append("Sum/Difference rule (outside)")
-
-    if has_chain:
-        order.append("Chain rule (inside)")
-
-    if len(order) == 0:
-        order.append("Basic rules only (power, constant, etc.)")
-
-    # Recommended tool
-    # If anything looks like chain (or product/quotient) and you want symbolic steps
-    # your Chain Rule Solver is the best single place.
-    if has_chain or has_product or has_quotient:
-        tool = "Use: Chain Rule Solver (steps)"
-    else:
-        tool = "Use: Derivative Solver f'(a) (numeric) OR Definition tool if required"
-
-    return {
-        "normalized": s,
-        "has_chain": has_chain,
-        "has_product": has_product,
-        "has_quotient": has_quotient,
-        "has_sumdiff": has_sumdiff,
-        "recommended_order": order,
-        "recommended_tool": tool
-    }
-
-def rule_helper_auto():
-    print("\nRULE HELPER (AUTO)")
-    expr = input("Paste the expression (in x): ")
-    info = classify_rules(expr)
-
-    print("\nExpression:")
-    print(info["normalized"])
-
-    print("\nDetected:")
-    print("Top-level quotient ( / ): " + ("YES" if info["has_quotient"] else "NO"))
-    print("Top-level product  ( * ): " + ("YES" if info["has_product"] else "NO"))
-    print("Top-level + or -       : " + ("YES" if info["has_sumdiff"] else "NO"))
-    print("Chain/composition      : " + ("YES" if info["has_chain"] else "NO"))
-
-    print("\nRule order (typical):")
-    i = 0
-    while i < len(info["recommended_order"]):
-        print(str(i + 1) + ") " + info["recommended_order"][i])
-        i += 1
-
-    print("\nRecommended:")
-    print(info["recommended_tool"])
-
-    pause()
-
-def rule_helper_auto_tests():
-    print("\nRULE HELPER TESTS\n")
-
-    tests = [
-        "sin(exp(x^3-3))",
-        "sin(1+ln(x))",
-        "(x^2)(sin(x))",
-        "(x^2 + 1)/(x - 3)",
-        "7*sin(x)",
-        "sqrt(1+x)"
-    ]
-
-    i = 0
-    while i < len(tests):
-        expr = tests[i]
-        info = classify_rules(expr)
-        print("TEST " + str(i + 1) + ": " + expr)
-        print("  order: " + ", ".join(info["recommended_order"]))
-        print("  tool : " + info["recommended_tool"])
-        print("")
-        i += 1
-
-    pause()
 
 class _Parser:
     def __init__(self, tokens):
@@ -880,7 +630,6 @@ class _Parser:
             self.i += 1
             name = t
 
-            # function call
             if self.peek() == "(" and _is_supported_func(name):
                 self.i += 1
                 inside = self.expr()
@@ -903,15 +652,10 @@ class _Parser:
         return None
 
 def _needs_parens_for_div(s):
-    # Add parentheses if the string contains an operator that could change meaning
-    # Example: (x+1) / x needs parens on x+1
     if s is None or len(s) == 0:
         return False
-
-    # already wrapped
     if len(s) >= 2 and s[0] == "(" and s[-1] == ")":
         return False
-
     ops = "+-*/^"
     i = 0
     while i < len(s):
@@ -921,14 +665,11 @@ def _needs_parens_for_div(s):
     return False
 
 def _fmt_div(num_s, den_s):
-    # Prefer clean "1/(...)" over "(1)/(...)"
     if num_s == "1":
-        # only parenthesize denominator if needed
         if _needs_parens_for_div(den_s):
             return "1/(" + den_s + ")"
         return "1/" + den_s
 
-    # General case: parenthesize pieces only when needed
     if _needs_parens_for_div(num_s):
         num_s = "(" + num_s + ")"
     if _needs_parens_for_div(den_s):
@@ -949,14 +690,10 @@ def _to_str(node):
         return node["fn"] + "(" + _to_str(node["a"]) + ")"
     if t == "bin":
         op = node["op"]
-
-        # IMPORTANT: make division unambiguous
         if op == "/":
             num_s = _to_str(node["a"])
             den_s = _to_str(node["b"])
             return _fmt_div(num_s, den_s)
-
-
         if op == "^":
             return _wrap(node["a"], "pow") + "^" + _wrap(node["b"], "pow")
         return _wrap(node["a"], op) + op + _wrap(node["b"], op)
@@ -1013,8 +750,6 @@ def _d(node, steps):
             return N_bin("-", _d(a, steps), _d(b, steps))
 
         if op == "*":
-            # If one side is constant (doesn't depend on x), avoid product rule spam:
-            # d(C*g(x)) = C*g'(x)
             a_dep = _depends_on_x(a)
             b_dep = _depends_on_x(b)
 
@@ -1026,12 +761,10 @@ def _d(node, steps):
                 steps.append("Const: C*g'")
                 return N_bin("*", _d(a, steps), b)
 
-            # otherwise, real product rule
             steps.append("Product: u'v + uv'")
             return N_bin("+",
                          N_bin("*", _d(a, steps), b),
                          N_bin("*", a, _d(b, steps)))
-
 
         if op == "/":
             steps.append("Quotient: (u'v-uv')/v^2")
@@ -1042,19 +775,13 @@ def _d(node, steps):
             return N_bin("/", top, bot)
 
         if op == "^":
-            # (g(x))^n where n is numeric
             if b["t"] == "num" and _depends_on_x(a):
                 n = b["v"]
-
-                # compute n-1 directly if it's an integer
                 if _is_int_str(n):
                     n_minus_1 = _int_str_dec(n)
                 else:
-                    # fallback for decimals: keep symbolic (n-1)
                     n_minus_1 = "(" + n + "-1)"
-
                 steps.append("Power+Chain: n*g^(n-1)*g'")
-
                 return N_bin("*",
                              N_bin("*", N_num(n),
                                    N_bin("^", a, N_num(n_minus_1))),
@@ -1062,8 +789,6 @@ def _d(node, steps):
 
             steps.append("NOTE: General a^g needs ln(a); not supported here.")
             return N_num("0")
-
-
 
     if t == "fun":
         fn = node["fn"]
@@ -1099,15 +824,10 @@ def _d(node, steps):
     return N_num("0")
 
 def _simplify_str(s):
-    # TI-safe cleanup loop. Repeat until nothing changes.
     if s is None:
         return s
 
     def _strip_standalone_zero_terms(t):
-        # Remove +0 or -0 only when it is a whole term, NOT part of decimals like -0.5 / 0.25
-        # Handles: ...+0..., ...-0... when the next char is end, ')', or an operator.
-
-        # +0 cases
         t = t.replace("+0)", ")")
         t = t.replace("+0+", "+")
         t = t.replace("+0-", "-")
@@ -1117,7 +837,6 @@ def _simplify_str(s):
         if len(t) >= 2 and t[-2:] == "+0":
             t = t[:-2]
 
-        # -0 cases
         t = t.replace("-0)", ")")
         t = t.replace("-0+", "+")
         t = t.replace("-0-", "-")
@@ -1127,13 +846,11 @@ def _simplify_str(s):
         if len(t) >= 2 and t[-2:] == "-0":
             t = t[:-2]
 
-        # leading 0+ / 0- safely
         if len(t) >= 2 and t[0:2] == "0+":
             t = t[2:]
         if len(t) >= 2 and t[0:2] == "0-":
             t = "-" + t[2:]
 
-        # simplify "(0+..." and "(0-..."
         t = t.replace("(0+", "(")
         t = t.replace("(0-", "(-")
 
@@ -1145,16 +862,13 @@ def _simplify_str(s):
 
         s = s.replace(" ", "")
 
-        # kill (1) factors
         s = s.replace("*(1)", "")
         s = s.replace("(1)*", "")
         s = s.replace("*1", "")
         s = s.replace("1*", "")
 
-        # remove standalone +0 and -0 terms safely
         s = _strip_standalone_zero_terms(s)
 
-        # collapse 0*something and something*0 (only the safe/common forms you emit)
         s = s.replace("0*x", "0")
         s = s.replace("x*0", "0")
         s = s.replace("0*pi", "0")
@@ -1162,168 +876,120 @@ def _simplify_str(s):
         s = s.replace("0*e", "0")
         s = s.replace("e*0", "0")
 
-        # parenthesized versions your generator emits
         s = s.replace("(0)*x", "0")
         s = s.replace("x*(0)", "0")
         s = s.replace("(0)*pi", "0")
         s = s.replace("pi*(0)", "0")
 
-        # clean double signs
         s = s.replace("+-", "-")
         s = s.replace("--", "+")
 
-        # cosmetic: (x) -> x
         s = s.replace("(x)", "x")
 
-        # SAFE exponent cosmetics (never do a global "^1" replace)
         s = s.replace("x^1", "x")
         s = s.replace("(x)^1", "x")
         s = s.replace("x^0", "1")
 
     return s
 
-def _extract_chain_layers(node):
-    """
-    Returns list of layers from OUTER to INNER.
-    Each layer is a tuple ("fun", fn) or ("pow", n_str)
-    Only extracts when it's a clean single chain (composition).
-    If expression is a sum/product at the top, returns [].
-    """
-    layers = []
-    cur = node
+# ================================
+# Show Work Helpers (Outer Rule)
+# ================================
 
-    while True:
-        if cur is None:
-            return []
-
-        t = cur.get("t")
-
-        # Function layer: sin(u), ln(u), sqrt(u), exp(u), etc.
-        if t == "fun":
-            layers.append(("fun", cur.get("fn")))
-            cur = cur.get("a")
-            continue
-
-        # Power layer: (g)^n with numeric exponent
-        if t == "bin" and cur.get("op") == "^":
-            a = cur.get("a")
-            b = cur.get("b")
-            if b is not None and b.get("t") == "num":
-                layers.append(("pow", b.get("v")))
-                cur = a
-                continue
-            else:
-                return []
-
-        # Stop when no longer a clean single outer wrapper
-        break
-
-    return layers
-
-def _format_layer_apply(layer, inner_str):
-    kind = layer[0]
-    if kind == "fun":
-        fn = layer[1]
-        return fn + "(" + inner_str + ")"
-    if kind == "pow":
-        n = layer[1]
-        return "(" + inner_str + ")^" + n
-    return inner_str
-
-def _print_exam_chain_work(ast):
-    layers = _extract_chain_layers(ast)
-
-    if len(layers) == 0:
-        print("This one is not a single clean chain (has +, -, *, / at top).")
-        print("Use product/quotient rules plus chain rule where needed.")
+def _print_outer_rule_work(ast):
+    # Shows the OUTSIDE rule work, then steps list covers inner rules.
+    if ast is None:
         return
 
-    # Build u_k (deepest) first
-    # inner-most expression:
-    # Walk down to get deepest node by re-traversing layers
-    cur = ast
-    i = 0
-    while i < len(layers):
-        if cur.get("t") == "fun":
-            cur = cur.get("a")
-        elif cur.get("t") == "bin" and cur.get("op") == "^":
-            cur = cur.get("a")
-        i += 1
+    t = ast.get("t")
+
+    if t == "bin":
+        op = ast.get("op")
+        a = ast.get("a")
+        b = ast.get("b")
+
+        if op == "+" or op == "-":
+            print("\n--- SHOW WORK (SUM / DIFFERENCE) ---")
+            print("Rule: d(u" + op + "v) = u'" + op + "v'")
+            pause()
+            print("Let u = " + _to_str(a))
+            print("Let v = " + _to_str(b))
+            pause()
+            print("Then u' = d/dx(" + _to_str(a) + ")")
+            print("And  v' = d/dx(" + _to_str(b) + ")")
+            pause()
+            print("So f'(x) = u'" + op + "v'")
+            pause()
+            return
+
+        if op == "*":
+            print("\n--- SHOW WORK (PRODUCT RULE) ---")
+            print("Rule: (uv)' = u'v + uv'")
+            pause()
+            print("Let u = " + _to_str(a))
+            print("Let v = " + _to_str(b))
+            pause()
+            print("Find u' and v':")
+            print("u' = d/dx(" + _to_str(a) + ")")
+            print("v' = d/dx(" + _to_str(b) + ")")
+            pause()
+            print("Then f'(x) = u'v + uv'")
+            pause()
+            return
+
+        if op == "/":
+            print("\n--- SHOW WORK (QUOTIENT RULE) ---")
+            print("Rule: (u/v)' = (u'v - uv') / v^2")
+            pause()
+            print("Let u = " + _to_str(a))
+            print("Let v = " + _to_str(b))
+            pause()
+            print("Find u' and v':")
+            print("u' = d/dx(" + _to_str(a) + ")")
+            print("v' = d/dx(" + _to_str(b) + ")")
+            pause()
+            print("Then f'(x) = (u'v - uv') / v^2")
+            pause()
+            return
+
+        if op == "^":
+            # show power rule if exponent numeric and base depends on x
+            if b is not None and b.get("t") == "num" and _depends_on_x(a):
+                n = b.get("v")
+                print("\n--- SHOW WORK (POWER + CHAIN) ---")
+                print("Rule: d(g^n) = n*g^(n-1)*g'")
+                pause()
+                print("Let g(x) = " + _to_str(a))
+                print("n = " + str(n))
+                pause()
+                print("Then f'(x) = " + str(n) + "*g^(n-1)*g'")
+                pause()
+                return
+
+    if t == "fun":
+        print("\n--- SHOW WORK (CHAIN RULE) ---")
+        fn = ast.get("fn")
+        print("Outer function: " + fn + "(u)")
+        print("Rule: take outer derivative, then multiply by u'")
         pause()
-
-    deepest_str = _to_str(cur)
-
-    # Print variable chain
-    print("\n--- SHOW WORK (CHAIN OF VARIABLES) ---")
-    k = len(layers)
-    print("Let u" + str(k) + " = " + deepest_str)
-    pause()
-
-    # Now build outward
-    # u_{k-1} = layer_{k-1}(u_k), ..., u0 = layer_0(u1)
-    idx = k - 1
-    while idx >= 0:
-        u_in = "u" + str(idx + 1)
-        u_out = "u" + str(idx)
-        expr_out = _format_layer_apply(layers[idx], u_in)
-        print("Let " + u_out + " = " + expr_out)
-        idx -= 1
+        print("Let u = " + _to_str(ast.get("a")))
         pause()
+        return
 
-    print("Then y = u0")
-
-    # Leibniz derivatives
-    print("\n--- LEIBNIZ FACTORS ---")
-    idx = 0
-    while idx < k:
-        layer = layers[idx]
-        if layer[0] == "fun":
-            fn = layer[1]
-            if fn == "sin":
-                print("du" + str(idx) + "/du" + str(idx + 1) + " = cos(u" + str(idx + 1) + ")")
-            elif fn == "cos":
-                print("du" + str(idx) + "/du" + str(idx + 1) + " = -sin(u" + str(idx + 1) + ")")
-            elif fn == "tan":
-                print("du" + str(idx) + "/du" + str(idx + 1) + " = 1/(cos(u" + str(idx + 1) + ")^2)")
-            elif fn == "ln":
-                print("du" + str(idx) + "/du" + str(idx + 1) + " = 1/u" + str(idx + 1))
-            elif fn == "sqrt":
-                print("du" + str(idx) + "/du" + str(idx + 1) + " = 1/(2*sqrt(u" + str(idx + 1) + "))")
-            elif fn == "exp":
-                print("du" + str(idx) + "/du" + str(idx + 1) + " = exp(u" + str(idx + 1) + ")")
-            else:
-                print("du" + str(idx) + "/du" + str(idx + 1) + " = (unsupported)")
-        elif layer[0] == "pow":
-            n = layer[1]
-            if _is_int_str(n):
-                nm1 = _int_str_dec(n)
-                print("du" + str(idx) + "/du" + str(idx + 1) + " = " + n + "*(u" + str(idx + 1) + "^" + nm1 + ")")
-            else:
-                print("du" + str(idx) + "/du" + str(idx + 1) + " = " + n + "*(u" + str(idx + 1) + "^(" + n + "-1))")
-
-        pause()
-        idx += 1
-
-    # Last derivative du_k/dx
-    print("du" + str(k) + "/dx = d/dx(" + deepest_str + ")")
-    print("du" + str(k) + "/dx = " + _to_str(_d(cur, [])))
-
-    print("\nMultiply:")
-    print("dy/dx = (du0/du1)(du1/du2)...(duk/dx)\n")
-
+    # default: nothing
+    return
 
 # ================================
 # Tools
 # ================================
 
 def _self_check():
-    # Minimal runtime sanity checks to catch missing helpers fast
     required = [
         "pause",
         "_menu_choice",
         "eval_expr",
         "derivative_definition_guided",
-        "chain_rule_tool",
+        "derivative_steps_auto",
         "_normalize_expr_for_symbolic",
         "_tokenize",
         "_Parser",
@@ -1398,7 +1064,6 @@ def limit_from_graph_guide():
         print("Since left != right, lim x->" + a + " f(x) is DNE")
     print("f(" + a + ") = " + f_val)
 
-
     pause()
 
 def limit_tool():
@@ -1413,7 +1078,6 @@ def limit_tool():
         return
 
     dx_values = [0.1, 0.01, 0.001, 0.0001]
-
     left_vals = []
     right_vals = []
 
@@ -1439,23 +1103,20 @@ def limit_tool():
         print("Consider evaluating lim x->a+.")
         pause()
         return
-    
+
     if len(right_vals) == 0 and len(left_vals) > 0:
         print("\nStep 3: Function is undefined on the RIGHT of a.")
         print("This suggests a LEFT-HAND limit.")
         print("Consider evaluating lim x->a-.")
         pause()
         return
-    
+
     if len(left_vals) == 0 and len(right_vals) == 0:
         print("\nStep 3: Function is undefined on BOTH sides of a.")
         print("Conclusion: Cannot estimate this limit.")
         pause()
         return
 
-
-
-    # Use closest dx that worked
     Ldx, L = left_vals[-1][0], left_vals[-1][1]
     Rdx, R = right_vals[-1][0], right_vals[-1][1]
 
@@ -1464,9 +1125,7 @@ def limit_tool():
     print("Right: x =", a + Rdx, " f(x) =", round(R, 6))
     pause()
 
-    # Paper-ready work lines
     print("\nWRITE THIS:")
-
     print("Let dx = " + str(Ldx) + " (left) and dx = " + str(Rdx) + " (right)")
     print("Left-hand:  f(a - dx) = f(" + str(round(a - Ldx, 6)) + ") approx " + str(round(L, 6)))
     print("Right-hand: f(a + dx) = f(" + str(round(a + Rdx, 6)) + ") approx " + str(round(R, 6)))
@@ -1478,8 +1137,6 @@ def limit_tool():
     else:
         print("Since left != right, the limit does not exist (DNE).")
     pause()
-
-
 
     BIG = 1e6
     print("\nStep 4: Conclusion")
@@ -1541,7 +1198,6 @@ def velocity_tool():
     else:
         print("Instantaneous rate at a ~= " + str(round(last_slope, 6)))
 
-        # Paper-ready work using smallest h
         h = hs[-1]
         f_ah = eval_expr(expr, a + h)
         if f_ah is not None:
@@ -1558,36 +1214,27 @@ def velocity_tool():
             print("Velocity approx (" + str(round(f_ah - fa, 10)) + ") / (" + str(h) + ")")
             print("Velocity approx " + str(round((f_ah - fa) / h, 10)))
 
-
     pause()
 
 def derivative_definition_guided():
     print("\nDERIVATIVE f'(x) USING DEFINITION (GUIDED)")
-    print("Use when asked for f'(x), not at a single point.\n")
-    print("\nNOTE:")
-    print("Only use this tool if the problem EXPLICITLY says:")
-    print("'Use the definition of the derivative'.")
+    print("Use ONLY if the problem says: use the definition.\n")
     pause()
-
 
     expr = input("Enter f(x): ").strip()
     expr_clean = expr.replace(" ", "")
 
-    # Step 1
     print("\nWRITE THIS (Step 1):")
     print("f'(x) = lim h->0 [ f(x+h) - f(x) ] / h")
     pause()
 
-    # Step 2
     sub = expr_clean.replace("x", "(x+h)")
     print("\nWRITE THIS (Step 2):")
     print("f'(x) = lim h->0 [ (" + sub + ") - (" + expr_clean + ") ] / h")
     pause()
 
-    # If it's x^n, do the real algebra steps
     n = _try_power_of_x(expr_clean)
     if n is not None:
-        # Step 3: Expand (x+h)^n
         expanded = _binomial_expand_xh(n)
         print("\nWRITE THIS (Step 3):")
         print("(x+h)^" + str(n) + " = " + expanded)
@@ -1595,46 +1242,33 @@ def derivative_definition_guided():
         print("(" + expanded + ") - (x^" + str(n) + ")")
         pause()
 
-        # Step 4: Combine like terms (cancel x^n)
-        # For x^n, this is always: (expanded) - x^n -> remaining terms
-        # We can show it explicitly as: everything except the first x^n term
-        # expanded starts with x^n (because k=0 term is x^n)
-        # so combined is: expanded - x^n = (expanded without leading x^n)
-        # We'll build a clean combined string using the known factored-form inside
-        inside = _poly_diff_factored_form_power(n)  # equals ( (x+h)^n - x^n ) / h
+        inside = _poly_diff_factored_form_power(n)
         print("\nWRITE THIS (Step 4):")
         print("Combine like terms with -x^" + str(n) + ":")
         print("(x+h)^" + str(n) + " - x^" + str(n) + " = h(" + inside + ")")
         pause()
 
-        # Step 5: Factor out h (already shown, but label it cleanly)
         print("\nWRITE THIS (Step 5):")
         print("Factor out h:")
         print("(x+h)^" + str(n) + " - x^" + str(n) + " = h(" + inside + ")")
         pause()
 
-        # Step 6: Cancel h in the REAL equation
         print("\nWRITE THIS (Step 6):")
         print("f'(x) = lim h->0 [ h(" + inside + ") ] / h")
         print("f'(x) = lim h->0 ( " + inside + " )")
         pause()
 
-        # Step 7: Plug in h = 0
         print("\nWRITE THIS (Step 7):")
         print("Plug in h = 0:")
-        # inside has h terms, but we can state the result cleanly for power rule:
         final = _power_simple_derivative_str(n)
         print("f'(x) = " + final)
         pause()
 
         print("\nFINAL:")
         print("f'(x) = " + final)
-
-        # keep your confidence booster behavior, but now it matches the real output
         pause()
         return
 
-    # Otherwise: general guidance, but paged, step-by-step
     print("\nWRITE THIS (Step 3):")
     print("Expand ONLY the (x+h) parts that need expanding")
     pause()
@@ -1655,33 +1289,17 @@ def derivative_definition_guided():
     print("Plug in h = 0")
     pause()
 
-    # Quick confidence boosters
-    if expr_clean == "x^2":
-        print("\nCommon result: f'(x) = 2x")
-    elif expr_clean == "x^3":
-        print("\nCommon result: f'(x) = 3x^2")
-    elif expr_clean == "sqrt(x)":
-        print("\nCommon result: f'(x) = 1/(2*sqrt(x))")
-    elif expr_clean == "1/x":
-        print("\nCommon result: f'(x) = -1/x^2")
-
+def derivative_steps_auto():
+    print("\nDERIVATIVE STEPS: f'(x) (AUTO)")
+    print("Default tool for derivative steps.")
+    print("Use Definition tool only if required.\n")
     pause()
-
-def chain_rule_tool():
-    print("\nCHAIN RULE SOLVER (SYMBOLIC + STEPS)")
-    #print("Supported: + - * / ^, sin cos tan ln sqrt exp, constants e pi, variable x")
-    #print("Tip: e^(...) is supported (rewritten as exp(...)). Example: sin(e^(x^3-3))")
-    #print("Tip: Use ln(x) not log(x)\n")
-    print("DEFAULT TOOL FOR DERIVATIVES")
-    print("Use this unless definition is explicitly required")
-    pause()
-
-
 
     raw = input("Enter function in x: ")
     s = _normalize_expr_for_symbolic(raw)
 
     print("Normalized:", s)
+    pause()
 
     toks = _tokenize(s)
     if toks is None:
@@ -1703,26 +1321,29 @@ def chain_rule_tool():
     d_str = _to_str(d_ast)
     d_str = _simplify_str(d_str)
 
-
-
     print("\n--- STEP-BY-STEP ---")
     print("f(x) = " + f_str)
-    _print_exam_chain_work(ast)
     pause()
+
+    # Show the OUTSIDE rule work first
+    _print_outer_rule_work(ast)
+
+    # Then show what rules actually triggered (including inner chain)
     if len(steps) == 0:
-        print("No special rules triggered.")
+        print("Rules triggered: none (basic).")
         pause()
     else:
+        print("\nRules triggered (in order):")
+        pause()
         i = 0
         while i < len(steps):
             print(str(i + 1) + ") " + steps[i])
             i += 1
             pause()
+
     print("\nWRITE THIS:")
     print("f(x)  = " + f_str)
     print("f'(x) = " + d_str)
-
-
     pause()
 
 def derivative_tool():
@@ -1762,36 +1383,29 @@ def derivative_tool():
         print("Not enough data to estimate derivative.")
     else:
         print("f'(" + str(a) + ") ~= " + str(round(last_good, 6)))
-        
+
     if last_good is not None:
-        # Paper-ready line using the smallest h
         h = hs[-1]
         f_plus = eval_expr(expr, a + h)
         f_minus = eval_expr(expr, a - h)
-    
+
         if f_plus is not None and f_minus is not None:
             print("\nWRITE THIS:")
             print("f'(a) approx [f(a+h) - f(a-h)] / (2h)")
             print("a = " + str(a) + ", h = " + str(h))
-    
-            # Option A: show substitution in terms of the original expression
             print("f(a+h) = (" + expr + ") with x = " + str(a + h))
             print("f(a-h) = (" + expr + ") with x = " + str(a - h))
             pause()
 
-            # Then show evaluated values
             print("f(a+h) approx " + str(round(f_plus, 6)))
             print("f(a-h) approx " + str(round(f_minus, 6)))
-    
+
             num = f_plus - f_minus
             den = 2.0 * h
             pause()
 
             print("f'(a) approx (" + str(round(num, 6)) + ") / (" + str(den) + ")")
             print("f'(" + str(a) + ") approx " + str(round(num / den, 6)))
-
-
-
 
     pause()
 
@@ -1840,8 +1454,6 @@ def tangent_line_tool():
     print("3) Point: (" + str(a) + ", " + str(round(y, 6)) + ")")
     print("4) Tangent line formula: y - f(a) = f'(a)(x - a)")
     print("   y - " + str(round(y, 6)) + " = " + str(round(m, 6)) + "(x - " + str(a) + ")")
-
-
     pause()
 
 def derivative_from_graph_guided():
@@ -1849,7 +1461,6 @@ def derivative_from_graph_guided():
     print("Use this when a GRAPH is given and you need f'(a).")
     print("Pick two points close to x = a and enter them.\n")
     print("If the graph has a corner, cusp, jump, or endpoint at a, then f'(a) may be DNE.")
-
 
     try:
         a = float(input("Enter a (where you want f'(a)): "))
@@ -1872,9 +1483,6 @@ def derivative_from_graph_guided():
         print("Please type y, n, or DNE.")
         pause()
         return
-
-
-
 
     print("\nEnter two points close to a from the graph.")
     print("Tip: Use symmetric points if possible (a-h and a+h).")
@@ -1910,7 +1518,6 @@ def derivative_from_graph_guided():
     print("m = (y2 - y1) / (x2 - x1)")
     print("m = (" + str(y2) + " - " + str(y1) + ") / (" + str(x2) + " - " + str(x1) + ")")
     print("f'(" + str(a) + ") approx " + str(round(m, 6)))
-
     pause()
 
 def algebraic_limit_helper():
@@ -1948,129 +1555,10 @@ def algebraic_limit_helper():
     print("2) If 0/0: factor or rationalize")
     print("3) Cancel common factor")
     print("4) Substitute again")
-
     pause()
 
-def quick_chooser():
-    while True:
-        print("\nCHOOSE THE RIGHT TOOL (TIERED)\n")
-        print("1) Limits")
-        print("2) Derivatives")
-        print("3) Graph-based (given a graph)")
-        print("4) Rule ID and Tests")
-        print("5) Back\n")
-
-        choice = input("Choose: ")
-
-        # -------------------------
-        # LIMITS
-        # -------------------------
-        if choice == "1":
-            while True:
-                print("\nLIMITS\n")
-                print("1) Limits from a Graph (Guided)")
-                print("2) Limit Calculator x->a (numeric check)")
-                print("3) Algebraic Limit Helper (factor, conjugate, cancel)")
-                print("4) Back\n")
-                c = input("Choose: ")
-
-                if c == "1":
-                    limit_from_graph_guide()
-                elif c == "2":
-                    limit_tool()
-                elif c == "3":
-                    algebraic_limit_helper()
-                elif c == "4":
-                    break
-                else:
-                    print("Invalid choice.")
-                    pause()
-
-        # -------------------------
-        # DERIVATIVES
-        # -------------------------
-        elif choice == "2":
-            while True:
-                print("\nDERIVATIVES\n")
-                print("1) Derivative Solver f'(a) (numeric)")
-                print("2) Must use derivative DEFINITION steps")
-                print("3) Tangent line at x=a")
-                print("4) Velocity / Rate of Change")
-                print("5) Chain Rule Solver (steps)")
-                print("6) Back\n")
-                c = input("Choose: ")
-
-                if c == "1":
-                    derivative_tool()
-                elif c == "2":
-                    derivative_definition_guided()
-                elif c == "3":
-                    tangent_line_tool()
-                elif c == "4":
-                    velocity_tool()
-                elif c == "5":
-                    chain_rule_tool()
-                elif c == "6":
-                    break
-                else:
-                    print("Invalid choice.")
-                    pause()
-
-        # -------------------------
-        # GRAPH-BASED
-        # -------------------------
-        elif choice == "3":
-            while True:
-                print("\nGRAPH-BASED\n")
-                print("1) Limit from a Graph (Guided)")
-                print("2) Derivative from a Graph (Guided)")
-                print("3) Back\n")
-                c = input("Choose: ")
-
-                if c == "1":
-                    limit_from_graph_guide()
-                elif c == "2":
-                    derivative_from_graph_guided()
-                elif c == "3":
-                    break
-                else:
-                    print("Invalid choice.")
-                    pause()
-
-        # -------------------------
-        # RULES AND TESTS
-        # -------------------------
-        elif choice == "4":
-            while True:
-                print("\nRULE ID AND TESTS\n")
-                print("1) Rule Helper (auto detect)")
-                print("2) Run rule helper tests")
-                print("3) Back\n")
-                c = input("Choose: ")
-
-                if c == "1":
-                    rule_helper_auto()
-                elif c == "2":
-                    rule_helper_auto_tests()
-                elif c == "3":
-                    break
-                else:
-                    print("Invalid choice.")
-                    pause()
-
-        # -------------------------
-        # BACK
-        # -------------------------
-        elif choice == "5":
-            return
-
-        else:
-            print("Invalid choice.")
-            pause()
-
-
 # ================================
-# Tiered Menus (no scrolling needed)
+# Menus
 # ================================
 
 def menu_limits():
@@ -2092,29 +1580,34 @@ def menu_limits():
             algebraic_limit_helper()
         else:
             print("Invalid choice.")
+            pause()
 
 def menu_derivatives():
     while True:
         print("\nDERIVATIVES")
-        print("1) Derivative Guide (Definition)")
+        print("1) Derivative Steps f'(x) (AUTO)")
         print("2) Derivative Solver f'(a) (numeric)")
-        print("3) Tangent line at x=a")
-        print("4) Derivative from a Graph (Guided)")
+        print("3) Must use derivative DEFINITION steps")
+        print("4) Tangent line at x=a")
+        print("5) Derivative from a Graph (Guided)")
         print("\nPress ENTER to go back")
 
         c = _menu_choice("Choice: ")
         if c == "":
             return
         elif c == "1":
-            derivative_definition_guided()
+            derivative_steps_auto()
         elif c == "2":
             derivative_tool()
         elif c == "3":
-            tangent_line_tool()
+            derivative_definition_guided()
         elif c == "4":
+            tangent_line_tool()
+        elif c == "5":
             derivative_from_graph_guided()
         else:
             print("Invalid choice.")
+            pause()
 
 def menu_applications():
     while True:
@@ -2129,48 +1622,13 @@ def menu_applications():
             velocity_tool()
         else:
             print("Invalid choice.")
-
-def menu_chain_rule():
-    while True:
-        print("\nCHAIN RULE")
-        print("1) Chain Rule Solver (steps)")
-        print("\nPress ENTER to go back")
-
-        c = _menu_choice("Choice: ")
-        if c == "":
-            return
-        elif c == "1":
-            chain_rule_tool()
-        else:
-            print("Invalid choice.")
-
-def menu_helpers():
-    while True:
-        print("\nHELPERS")
-        print("1) Rule Helper (auto detect)")
-        print("2) Rule Helper Tests")
-        print("3) Help me choose the right tool")
-        print("\nPress ENTER to go back")
-
-        c = _menu_choice("Choice: ")
-        if c == "":
-            return
-        elif c == "1":
-            rule_helper_auto()
-        elif c == "2":
-            rule_helper_auto_tests()
-        elif c == "3":
-            quick_chooser()
-        else:
-            print("Invalid choice.")
-
+            pause()
 
 # ================================
 # Main Menu
 # ================================
 
 def main():
-    # Self-check to catch missing helpers before we get into the menu
     if not _self_check():
         return
 
@@ -2179,14 +1637,11 @@ def main():
         print("1) Limits")
         print("2) Derivatives")
         print("3) Applications")
-        print("4) Chain Rule")
-        print("5) Helpers")
-        print("6) Quit")
+        print("4) Quit")
         print("\nPress ENTER to go back")
 
         choice = _menu_choice("Choice: ")
 
-        # ENTER at top just redraws menu
         if choice == "":
             continue
 
@@ -2197,16 +1652,12 @@ def main():
         elif choice == "3":
             menu_applications()
         elif choice == "4":
-            menu_chain_rule()
-        elif choice == "5":
-            menu_helpers()
-        elif choice == "6":
             print("Goodbye.")
             break
         else:
             print("Invalid choice.")
+            pause()
 
 main()
-
 
 # End of Calculus Buddy
