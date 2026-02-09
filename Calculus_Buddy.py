@@ -1,4 +1,4 @@
-﻿#              Calculus Buddy (BETA BRANCH)
+﻿#              Calculus Buddy (Features: Beta Branch)
 #               By ScienTiz
 #       https://github.com/ScienTiz/Calculus-Buddy
 
