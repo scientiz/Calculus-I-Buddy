@@ -197,6 +197,173 @@ def derivative_at(expr, a):
         return None
     return (f1 - f2) / (2.0 * h)
 
+def _is_small_int(s):
+    if s is None or len(s) == 0:
+        return False
+    i = 0
+    while i < len(s):
+        o = ord(s[i])
+        if not (48 <= o <= 57):
+            return False
+        i += 1
+    return True
+
+def _binom_coeffs(n):
+    # returns coeffs for (x+h)^n = sum_{k=0..n} C(n,k) x^(n-k) h^k
+    # n is small (2..6 typically)
+    # simple Pascal triangle
+    row = [1]
+    i = 0
+    while i < n:
+        new = [1]
+        j = 0
+        while j < len(row) - 1:
+            new.append(row[j] + row[j + 1])
+            j += 1
+        new.append(1)
+        row = new
+        i += 1
+    return row  # length n+1
+
+def _poly_diff_factored_form_power(n):
+    """
+    Builds the classic identity:
+      (x+h)^n - x^n = h * [C(n,1)x^(n-1) + C(n,2)x^(n-2)h + ... + h^(n-1)]
+    Returns inside string (the bracket), TI-style with ^.
+    """
+    coeffs = _binom_coeffs(n)  # C(n,k)
+    # we want terms for k = 1..n : C(n,k) x^(n-k) h^k
+    # after factoring h: k becomes (k-1) on h
+    terms = []
+    k = 1
+    while k <= n:
+        c = coeffs[k]
+        x_pow = n - k
+        h_pow = k - 1
+
+        # build x piece
+        if x_pow == 0:
+            x_part = ""
+        elif x_pow == 1:
+            x_part = "x"
+        else:
+            x_part = "x^" + str(x_pow)
+
+        # build h piece (after factoring h)
+        if h_pow == 0:
+            h_part = ""
+        elif h_pow == 1:
+            h_part = "h"
+        else:
+            h_part = "h^" + str(h_pow)
+
+        # multiply pieces carefully
+        piece = ""
+        if c != 1:
+            piece += str(c) + "*"
+
+        if x_part != "" and h_part != "":
+            piece += x_part + "*" + h_part
+        elif x_part != "":
+            piece += x_part
+        elif h_part != "":
+            piece += h_part
+        else:
+            piece += "1"
+
+        terms.append(piece)
+        k += 1
+
+    # join with +
+    out = ""
+    i = 0
+    while i < len(terms):
+        if i == 0:
+            out += terms[i]
+        else:
+            out += " + " + terms[i]
+        i += 1
+    return out
+
+def _binomial_expand_xh(n):
+    """
+    Returns expansion for (x+h)^n as a TI-style string with ^ and *.
+    Example n=2 -> x^2 + 2*x*h + h^2
+    """
+    coeffs = _binom_coeffs(n)  # C(n,k)
+
+    terms = []
+    k = 0
+    while k <= n:
+        c = coeffs[k]
+        x_pow = n - k
+        h_pow = k
+
+        # x piece
+        if x_pow == 0:
+            x_part = ""
+        elif x_pow == 1:
+            x_part = "x"
+        else:
+            x_part = "x^" + str(x_pow)
+
+        # h piece
+        if h_pow == 0:
+            h_part = ""
+        elif h_pow == 1:
+            h_part = "h"
+        else:
+            h_part = "h^" + str(h_pow)
+
+        # coefficient
+        piece = ""
+        if c != 1:
+            piece += str(c) + "*"
+
+        if x_part != "" and h_part != "":
+            piece += x_part + "*" + h_part
+        elif x_part != "":
+            piece += x_part
+        elif h_part != "":
+            piece += h_part
+        else:
+            piece += "1"
+
+        terms.append(piece)
+        k += 1
+
+    # join
+    out = ""
+    i = 0
+    while i < len(terms):
+        if i == 0:
+            out += terms[i]
+        else:
+            out += " + " + terms[i]
+        i += 1
+    return out
+
+def _power_simple_derivative_str(n):
+    # derivative of x^n is n*x^(n-1)
+    if n == 2:
+        return "2*x"
+    if n == 3:
+        return "3*x^2"
+    if n == 1:
+        return "1"
+    return str(n) + "*x^" + str(n - 1)
+
+def _try_power_of_x(expr):
+    # accepts: x^2, x^3, x^4...
+    s = expr.replace(" ", "")
+    if len(s) >= 3 and s[0] == "x" and s[1] == "^":
+        n_str = s[2:]
+        if _is_small_int(n_str):
+            n = int(n_str)
+            if n >= 2 and n <= 8:
+                return n
+    return None
+
 def function_value(expr, a):
     return eval_expr(expr, a)
 
@@ -492,8 +659,6 @@ def N_un(op, a): return {"t": "un", "op": op, "a": a}
 def N_bin(op, a, b): return {"t": "bin", "op": op, "a": a, "b": b}
 def N_fun(fn, a): return {"t": "fun", "fn": fn, "a": a}
 
-def _strip_spaces(s):
-    return s.replace(" ", "")
 
 def _has_top_level_op(s, ops):
     # True if any operator in ops appears at depth 0 (not inside parentheses)
@@ -510,22 +675,6 @@ def _has_top_level_op(s, ops):
             return True
         i += 1
     return False
-
-def _count_top_level_ops(s, ops):
-    depth = 0
-    count = 0
-    i = 0
-    while i < len(s):
-        ch = s[i]
-        if ch == "(":
-            depth += 1
-        elif ch == ")":
-            if depth > 0:
-                depth -= 1
-        elif depth == 0 and ch in ops:
-            count += 1
-        i += 1
-    return count
 
 def _contains_any(s, subs):
     i = 0
@@ -1033,12 +1182,6 @@ def _simplify_str(s):
 
     return s
 
-def _is_num_node(node):
-    return node is not None and node.get("t") == "num"
-
-def _node_is_number_str(node, s):
-    return _is_num_node(node) and node.get("v") == s
-
 def _extract_chain_layers(node):
     """
     Returns list of layers from OUTER to INNER.
@@ -1106,6 +1249,7 @@ def _print_exam_chain_work(ast):
         elif cur.get("t") == "bin" and cur.get("op") == "^":
             cur = cur.get("a")
         i += 1
+        pause()
 
     deepest_str = _to_str(cur)
 
@@ -1113,6 +1257,7 @@ def _print_exam_chain_work(ast):
     print("\n--- SHOW WORK (CHAIN OF VARIABLES) ---")
     k = len(layers)
     print("Let u" + str(k) + " = " + deepest_str)
+    pause()
 
     # Now build outward
     # u_{k-1} = layer_{k-1}(u_k), ..., u0 = layer_0(u1)
@@ -1123,6 +1268,7 @@ def _print_exam_chain_work(ast):
         expr_out = _format_layer_apply(layers[idx], u_in)
         print("Let " + u_out + " = " + expr_out)
         idx -= 1
+        pause()
 
     print("Then y = u0")
 
@@ -1155,6 +1301,7 @@ def _print_exam_chain_work(ast):
             else:
                 print("du" + str(idx) + "/du" + str(idx + 1) + " = " + n + "*(u" + str(idx + 1) + "^(" + n + "-1))")
 
+        pause()
         idx += 1
 
     # Last derivative du_k/dx
@@ -1168,6 +1315,42 @@ def _print_exam_chain_work(ast):
 # ================================
 # Tools
 # ================================
+
+def _self_check():
+    # Minimal runtime sanity checks to catch missing helpers fast
+    required = [
+        "pause",
+        "_menu_choice",
+        "eval_expr",
+        "derivative_definition_guided",
+        "chain_rule_tool",
+        "_normalize_expr_for_symbolic",
+        "_tokenize",
+        "_Parser",
+        "_d",
+        "_to_str",
+        "_simplify_str",
+    ]
+
+    missing = []
+    i = 0
+    while i < len(required):
+        name = required[i]
+        if name not in globals():
+            missing.append(name)
+        i += 1
+
+    if len(missing) > 0:
+        print("\nSELF CHECK FAIL: missing helpers:")
+        i = 0
+        while i < len(missing):
+            print(" - " + missing[i])
+            i += 1
+        print("\nRevert the last deletions or restore these functions.\n")
+        pause()
+        return False
+
+    return True
 
 def limit_from_graph_guide():
     print("\nLIMITS FROM A GRAPH (GUIDED)")
@@ -1381,40 +1564,118 @@ def velocity_tool():
 def derivative_definition_guided():
     print("\nDERIVATIVE f'(x) USING DEFINITION (GUIDED)")
     print("Use when asked for f'(x), not at a single point.\n")
-
-    expr = input("Enter f(x): ")
-
-    print("\n--- WRITE THIS ---")
-    print("1) f'(x) = lim h->0 [ f(x+h) - f(x) ] / h")
-
-    sub = expr.replace("x", "(x+h)")
-    print("2) f'(x) = lim h->0 [ (" + sub + ") - (" + expr + ") ] / h")
-
-    print("3) Expand (x+h) part by hand")
+    print("\nNOTE:")
+    print("Only use this tool if the problem EXPLICITLY says:")
+    print("'Use the definition of the derivative'.")
     pause()
-    print("4) Combine like terms")
-    print("5) Factor out h")
+
+
+    expr = input("Enter f(x): ").strip()
+    expr_clean = expr.replace(" ", "")
+
+    # Step 1
+    print("\nWRITE THIS (Step 1):")
+    print("f'(x) = lim h->0 [ f(x+h) - f(x) ] / h")
     pause()
-    print("6) Cancel h")
-    print("7) Plug in h = 0")
+
+    # Step 2
+    sub = expr_clean.replace("x", "(x+h)")
+    print("\nWRITE THIS (Step 2):")
+    print("f'(x) = lim h->0 [ (" + sub + ") - (" + expr_clean + ") ] / h")
     pause()
+
+    # If it's x^n, do the real algebra steps
+    n = _try_power_of_x(expr_clean)
+    if n is not None:
+        # Step 3: Expand (x+h)^n
+        expanded = _binomial_expand_xh(n)
+        print("\nWRITE THIS (Step 3):")
+        print("(x+h)^" + str(n) + " = " + expanded)
+        print("So numerator becomes:")
+        print("(" + expanded + ") - (x^" + str(n) + ")")
+        pause()
+
+        # Step 4: Combine like terms (cancel x^n)
+        # For x^n, this is always: (expanded) - x^n -> remaining terms
+        # We can show it explicitly as: everything except the first x^n term
+        # expanded starts with x^n (because k=0 term is x^n)
+        # so combined is: expanded - x^n = (expanded without leading x^n)
+        # We'll build a clean combined string using the known factored-form inside
+        inside = _poly_diff_factored_form_power(n)  # equals ( (x+h)^n - x^n ) / h
+        print("\nWRITE THIS (Step 4):")
+        print("Combine like terms with -x^" + str(n) + ":")
+        print("(x+h)^" + str(n) + " - x^" + str(n) + " = h(" + inside + ")")
+        pause()
+
+        # Step 5: Factor out h (already shown, but label it cleanly)
+        print("\nWRITE THIS (Step 5):")
+        print("Factor out h:")
+        print("(x+h)^" + str(n) + " - x^" + str(n) + " = h(" + inside + ")")
+        pause()
+
+        # Step 6: Cancel h in the REAL equation
+        print("\nWRITE THIS (Step 6):")
+        print("f'(x) = lim h->0 [ h(" + inside + ") ] / h")
+        print("f'(x) = lim h->0 ( " + inside + " )")
+        pause()
+
+        # Step 7: Plug in h = 0
+        print("\nWRITE THIS (Step 7):")
+        print("Plug in h = 0:")
+        # inside has h terms, but we can state the result cleanly for power rule:
+        final = _power_simple_derivative_str(n)
+        print("f'(x) = " + final)
+        pause()
+
+        print("\nFINAL:")
+        print("f'(x) = " + final)
+
+        # keep your confidence booster behavior, but now it matches the real output
+        pause()
+        return
+
+    # Otherwise: general guidance, but paged, step-by-step
+    print("\nWRITE THIS (Step 3):")
+    print("Expand ONLY the (x+h) parts that need expanding")
+    pause()
+
+    print("\nWRITE THIS (Step 4):")
+    print("Combine like terms")
+    pause()
+
+    print("\nWRITE THIS (Step 5):")
+    print("Factor out h (every term should have h)")
+    pause()
+
+    print("\nWRITE THIS (Step 6):")
+    print("Cancel h")
+    pause()
+
+    print("\nWRITE THIS (Step 7):")
+    print("Plug in h = 0")
+    pause()
+
     # Quick confidence boosters
-    if expr == "x^2":
+    if expr_clean == "x^2":
         print("\nCommon result: f'(x) = 2x")
-    elif expr == "x^3":
+    elif expr_clean == "x^3":
         print("\nCommon result: f'(x) = 3x^2")
-    elif expr == "sqrt(x)":
+    elif expr_clean == "sqrt(x)":
         print("\nCommon result: f'(x) = 1/(2*sqrt(x))")
-    elif expr == "1/x":
+    elif expr_clean == "1/x":
         print("\nCommon result: f'(x) = -1/x^2")
 
     pause()
 
 def chain_rule_tool():
     print("\nCHAIN RULE SOLVER (SYMBOLIC + STEPS)")
-    print("Supported: + - * / ^, sin cos tan ln sqrt exp, constants e pi, variable x")
-    print("Tip: e^(...) is supported (rewritten as exp(...)). Example: sin(e^(x^3-3))")
-    print("Tip: Use ln(x) not log(x)\n")
+    #print("Supported: + - * / ^, sin cos tan ln sqrt exp, constants e pi, variable x")
+    #print("Tip: e^(...) is supported (rewritten as exp(...)). Example: sin(e^(x^3-3))")
+    #print("Tip: Use ln(x) not log(x)\n")
+    print("DEFAULT TOOL FOR DERIVATIVES")
+    print("Use this unless definition is explicitly required")
+    pause()
+
 
 
     raw = input("Enter function in x: ")
@@ -1447,15 +1708,16 @@ def chain_rule_tool():
     print("\n--- STEP-BY-STEP ---")
     print("f(x) = " + f_str)
     _print_exam_chain_work(ast)
-
+    pause()
     if len(steps) == 0:
         print("No special rules triggered.")
+        pause()
     else:
         i = 0
         while i < len(steps):
             print(str(i + 1) + ") " + steps[i])
             i += 1
-    pause()
+            pause()
     print("\nWRITE THIS:")
     print("f(x)  = " + f_str)
     print("f'(x) = " + d_str)
@@ -1908,6 +2170,10 @@ def menu_helpers():
 # ================================
 
 def main():
+    # Self-check to catch missing helpers before we get into the menu
+    if not _self_check():
+        return
+
     while True:
         print("\n\n            Calculus Buddy:  By ScienTiz\n")
         print("1) Limits")
