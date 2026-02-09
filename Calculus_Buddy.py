@@ -23,6 +23,25 @@ def pause(msg="Press ENTER to continue..."):
     if DISPLAY_MODE == "paged":
         input("\n" + msg)
 
+def _print_wrap(s, width=26):
+    # TI screen friendly
+    if s is None:
+        return
+    t = str(s)
+    while len(t) > width:
+        print(t[:width])
+        t = t[width:]
+    print(t)
+
+def _say(lines, do_pause=True):
+    # lines: list of strings
+    i = 0
+    while i < len(lines):
+        _print_wrap(lines[i])
+        i += 1
+    if do_pause:
+        pause()
+
 def _is_alnum_or_underscore(ch):
     if ch == "_":
         return True
@@ -897,7 +916,6 @@ def _simplify_str(s):
 # ================================
 
 def _print_outer_rule_work(ast):
-    # Shows the OUTSIDE rule work, then steps list covers inner rules.
     if ast is None:
         return
 
@@ -909,75 +927,45 @@ def _print_outer_rule_work(ast):
         b = ast.get("b")
 
         if op == "+" or op == "-":
-            print("\n--- SHOW WORK (SUM / DIFFERENCE) ---")
-            print("Rule: d(u" + op + "v) = u'" + op + "v'")
-            pause()
-            print("Let u = " + _to_str(a))
-            print("Let v = " + _to_str(b))
-            pause()
-            print("Then u' = d/dx(" + _to_str(a) + ")")
-            print("And  v' = d/dx(" + _to_str(b) + ")")
-            pause()
-            print("So f'(x) = u'" + op + "v'")
-            pause()
+            _say(["SHOW WORK",
+                  "Sum/Diff",
+                  "d(u"+op+"v)=u'"+op+"v'"], True)
+            _say(["u = " + _to_str(a),
+                  "v = " + _to_str(b)], True)
             return
 
         if op == "*":
-            print("\n--- SHOW WORK (PRODUCT RULE) ---")
-            print("Rule: (uv)' = u'v + uv'")
-            pause()
-            print("Let u = " + _to_str(a))
-            print("Let v = " + _to_str(b))
-            pause()
-            print("Find u' and v':")
-            print("u' = d/dx(" + _to_str(a) + ")")
-            print("v' = d/dx(" + _to_str(b) + ")")
-            pause()
-            print("Then f'(x) = u'v + uv'")
-            pause()
+            _say(["SHOW WORK",
+                  "Product",
+                  "(uv)'=u'v+uv'"], True)
+            _say(["u = " + _to_str(a),
+                  "v = " + _to_str(b)], True)
             return
 
         if op == "/":
-            print("\n--- SHOW WORK (QUOTIENT RULE) ---")
-            print("Rule: (u/v)' = (u'v - uv') / v^2")
-            pause()
-            print("Let u = " + _to_str(a))
-            print("Let v = " + _to_str(b))
-            pause()
-            print("Find u' and v':")
-            print("u' = d/dx(" + _to_str(a) + ")")
-            print("v' = d/dx(" + _to_str(b) + ")")
-            pause()
-            print("Then f'(x) = (u'v - uv') / v^2")
-            pause()
+            _say(["SHOW WORK",
+                  "Quotient",
+                  "(u/v)'=(u'v-uv')/v^2"], True)
+            _say(["u = " + _to_str(a),
+                  "v = " + _to_str(b)], True)
             return
 
         if op == "^":
-            # show power rule if exponent numeric and base depends on x
             if b is not None and b.get("t") == "num" and _depends_on_x(a):
                 n = b.get("v")
-                print("\n--- SHOW WORK (POWER + CHAIN) ---")
-                print("Rule: d(g^n) = n*g^(n-1)*g'")
-                pause()
-                print("Let g(x) = " + _to_str(a))
-                print("n = " + str(n))
-                pause()
-                print("Then f'(x) = " + str(n) + "*g^(n-1)*g'")
-                pause()
+                _say(["SHOW WORK",
+                      "Power+Chain",
+                      "d(g^n)=n*g^(n-1)*g'"], True)
+                _say(["g(x)=" + _to_str(a),
+                      "n=" + str(n)], True)
                 return
 
     if t == "fun":
-        print("\n--- SHOW WORK (CHAIN RULE) ---")
         fn = ast.get("fn")
-        print("Outer function: " + fn + "(u)")
-        print("Rule: take outer derivative, then multiply by u'")
-        pause()
-        print("Let u = " + _to_str(ast.get("a")))
-        pause()
-        return
-
-    # default: nothing
-    return
+        _say(["SHOW WORK",
+              "Chain rule",
+              fn + "(u)"], True)
+        _say(["u = " + _to_str(ast.get("a"))], True)
 
 # ================================
 # Tools
@@ -1290,61 +1278,50 @@ def derivative_definition_guided():
     pause()
 
 def derivative_steps_auto():
-    print("\nDERIVATIVE STEPS: f'(x) (AUTO)")
-    print("Default tool for derivative steps.")
-    print("Use Definition tool only if required.\n")
-    pause()
+    _say(["DERIV STEPS f'(x)",
+          "Auto mode",
+          "Enter f(x) in x"], True)
 
-    raw = input("Enter function in x: ")
+    raw = input("f(x): ")
     s = _normalize_expr_for_symbolic(raw)
 
-    print("Normalized:", s)
-    pause()
+    _say(["Normalized:", s], True)
 
     toks = _tokenize(s)
     if toks is None:
-        print("Tokenizer failed. Check your input.")
-        pause()
+        _say(["Tokenizer failed.",
+              "Check input."], True)
         return
 
     p = _Parser(toks)
     ast = p.parse()
     if ast is None:
-        print("Parse failed. Check parentheses and spelling.")
-        pause()
+        _say(["Parse failed.",
+              "Check parens/spelling."], True)
         return
 
     steps = []
     d_ast = _d(ast, steps)
 
     f_str = _to_str(ast)
-    d_str = _to_str(d_ast)
-    d_str = _simplify_str(d_str)
+    d_str = _simplify_str(_to_str(d_ast))
 
-    print("\n--- STEP-BY-STEP ---")
-    print("f(x) = " + f_str)
-    pause()
+    _say(["f(x) =", f_str], True)
 
-    # Show the OUTSIDE rule work first
     _print_outer_rule_work(ast)
 
-    # Then show what rules actually triggered (including inner chain)
     if len(steps) == 0:
-        print("Rules triggered: none (basic).")
-        pause()
+        _say(["Rules: basic"], True)
     else:
-        print("\nRules triggered (in order):")
-        pause()
+        _say(["Rules used:"], True)
         i = 0
         while i < len(steps):
-            print(str(i + 1) + ") " + steps[i])
+            _say([str(i + 1) + ") " + steps[i]], True)
             i += 1
-            pause()
 
-    print("\nWRITE THIS:")
-    print("f(x)  = " + f_str)
-    print("f'(x) = " + d_str)
-    pause()
+    _say(["WRITE THIS:",
+          "f(x)  = " + f_str,
+          "f'(x) = " + d_str], True)
 
 def derivative_tool():
     print("\nDERIVATIVE: f'(a) (numeric estimate)")
@@ -1557,6 +1534,16 @@ def algebraic_limit_helper():
     print("4) Substitute again")
     pause()
 
+def toggle_display_mode():
+    global DISPLAY_MODE
+    if DISPLAY_MODE == "paged":
+        DISPLAY_MODE = "compact"
+    else:
+        DISPLAY_MODE = "paged"
+    print("\nDisplay mode is now:", DISPLAY_MODE)
+    pause()
+
+
 # ================================
 # Menus
 # ================================
@@ -1634,6 +1621,7 @@ def main():
 
     while True:
         print("\n\n            Calculus Buddy:  By ScienTiz\n")
+        print("0) Toggle display mode (paged/compact)")
         print("1) Limits")
         print("2) Derivatives")
         print("3) Applications")
@@ -1645,7 +1633,9 @@ def main():
         if choice == "":
             continue
 
-        if choice == "1":
+        if choice == "0":
+            toggle_display_mode()
+        elif choice == "1":
             menu_limits()
         elif choice == "2":
             menu_derivatives()
